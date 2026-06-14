@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VYLON | Tienda Oficial</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root { --vylon-gold: #D4AF37; --vylon-black: #0a0a0a; }
+        body { font-family: sans-serif; background: #f4f4f4; margin: 0; }
+        header { background: var(--vylon-gold); padding: 20px; text-align: center; }
+        .container { max-width: 600px; margin: auto; padding: 20px; }
+        .card { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #admin-panel { display: none; background: #222; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        input, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 5px; border: none; }
+        button { background: var(--vylon-gold); font-weight: bold; cursor: pointer; }
+        .trigger-area { text-align: center; color: #888; font-size: 12px; padding: 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <header><h1>VYLON</h1></header>
+
+    <div class="container">
+        <div id="admin-panel">
+            <h3>Gestión VYLON</h3>
+            <div id="reader" style="width:100%"></div>
+            <button onclick="iniciarEscaneo()">Escanear Código de Barras</button>
+            <input type="text" id="codigo" placeholder="Código (detectado al escanear)">
+            <input type="text" id="nombre" placeholder="Nombre del producto">
+            <input type="text" id="precio" placeholder="Precio">
+            <input type="file" id="foto" accept="image/*" capture="environment">
+            <button onclick="guardar()">Guardar Producto</button>
+            <button onclick="cerrar()" style="background:#444; color:white;">Cerrar</button>
+        </div>
+
+        <div id="lista-productos"></div>
+    </div>
+
+    <div class="trigger-area" onclick="abrir()">Panel de Administración</div>
+
+    <script>
+        function cargar() {
+            let prods = JSON.parse(localStorage.getItem('vylon_db') || '[]');
+            let div = document.getElementById('lista-productos');
+            div.innerHTML = '';
+            prods.forEach(p => {
+                div.innerHTML += `<div class="card"><h3>${p.nombre}</h3><p>Código: ${p.codigo}</p><p>Precio: ${p.precio}</p><img src="${p.img}" style="width:100px"></div>`;
+            });
+        }
+
+        function iniciarEscaneo() {
+            const html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+            (decodedText) => {
+                document.getElementById('codigo').value = decodedText;
+                html5QrCode.stop();
+            });
+        }
+
+        function guardar() {
+            let nombre = document.getElementById('nombre').value;
+            let codigo = document.getElementById('codigo').value;
+            let precio = document.getElementById('precio').value;
+            let file = document.getElementById('foto').files[0];
+            let reader = new FileReader();
+            reader.onloadend = () => {
+                let prods = JSON.parse(localStorage.getItem('vylon_db') || '[]');
+                prods.push({nombre, codigo, precio, img: reader.result});
+                localStorage.setItem('vylon_db', JSON.stringify(prods));
+                alert("Guardado!");
+                cargar();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function abrir() { let p = prompt("Clave:"); if(p=="1234") document.getElementById('admin-panel').style.display = 'block'; }
+        function cerrar() { document.getElementById('admin-panel').style.display = 'none'; }
+        cargar();
+    </script>
+</body>
+</html>
