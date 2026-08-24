@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin - Verificación de Pagos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white font-sans p-6">
+    <div class="max-w-5xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">Verificación de Órdenes y Afiliados</h1>
+        
+        <div class="bg-slate-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-xl font-bold mb-4">Ventas Pendientes de Validación</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-700 text-gray-300">
+                        <tr>
+                            <th class="p-3">ID Orden</th>
+                            <th class="p-3">Producto</th>
+                            <th class="p-3">Afiliado</th>
+                            <th class="p-3">Comisión</th>
+                            <th class="p-3">Comprobante</th>
+                            <th class="p-3">Estado</th>
+                            <th class="p-3">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-orders-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
