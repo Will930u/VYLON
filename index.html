@@ -1,1320 +1,163 @@
 <!DOCTYPE html>
 <html lang="es" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VYLON | Stock & Flow - Sistema Integral</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            vylon: {
-              gold: '#D4AF37',
-              goldHover: '#B89628',
-              darkBg: '#0b0b0b',
-              cardBg: '#121212',
-              inputBg: '#1a1a1a',
-              border: '#2a2a2a'
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      background-color: #0b0b0b;
-      color: #e5e5e5;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    .amber-gradient-text {
-      background: linear-gradient(135deg, #FFE259 0%, #FFA751 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .custom-scrollbar::-webkit-scrollbar {
-      height: 6px;
-      width: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #121212;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #333;
-      border-radius: 4px;
-    }
-    .tab-active {
-      color: #D4AF37;
-      border-bottom: 2px solid #D4AF37;
-    }
-    .tab-inactive {
-      color: #888888;
-      border-bottom: 2px solid transparent;
-    }
-  </style>
-</head>
-<body class="min-h-screen flex flex-col justify-between relative selection:bg-yellow-500 selection:text-black">
-
-  <header class="bg-vylon-cardBg border-b border-vylon-border sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-      <div class="flex items-center space-x-3 cursor-pointer" onclick="showView('store')">
-        <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-600 to-amber-300 flex items-center justify-center font-bold text-black text-xl shadow-lg">V</div>
-        <div>
-          <h1 class="text-xl font-bold tracking-wide amber-gradient-text">VYLON</h1>
-          <p class="text-[10px] text-gray-400">Stock & Flow | Maracay, Venezuela</p>
-        </div>
-      </div>
-      <div class="flex items-center space-x-2">
-        <button onclick="showView('affiliate-auth')" class="bg-vylon-inputBg hover:bg-zinc-800 text-vylon-gold border border-vylon-gold/30 px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
-          <i class="fa-solid fa-users"></i>
-          <span>Afiliados</span>
-        </button>
-        <button id="btn-admin-view-toggle" onclick="openAdminAuthModal()" class="hidden bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
-          <i class="fa-solid fa-user-shield"></i>
-          <span>ADMIN</span>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
-
-    <section id="view-store" class="space-y-8">
-      <div class="bg-gradient-to-b from-vylon-cardBg to-vylon-darkBg border border-vylon-border rounded-2xl p-6 sm:p-10 text-center relative overflow-hidden shadow-2xl">
-        <div class="w-12 h-12 mx-auto bg-amber-500/10 text-vylon-gold rounded-full flex items-center justify-center text-xl mb-4 border border-vylon-gold/20">
-          <i class="fa-solid fa-sparkles"></i>
-        </div>
-        <span class="text-[11px] font-mono tracking-widest text-vylon-gold uppercase">Tienda Oficial VYLON</span>
-        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-2">Productos con Entrega GRATIS en Maracay</h2>
-        <p class="text-xs sm:text-sm text-gray-400 max-w-xl mx-auto mt-2">
-          Paga con Pago Móvil a tasa BCV o USDT. Verificación directa mediante Telegram.
-        </p>
-        <div class="mt-3 text-[11px] text-amber-400/80 font-mono">
-          HORARIO DE ATENCIÓN: 09:00 A 03:00 LUN-VIE
-        </div>
-      </div>
-
-      <div class="space-y-4">
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-boxes-stacked text-vylon-gold"></i> Productos en Inventario
-          </h3>
-          <div class="w-full sm:w-72 relative">
-            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-gray-500"></i>
-            <input type="text" id="public-search" oninput="renderPublicStore()" placeholder="Buscar producto por nombre o código..." class="w-full pl-8 pr-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-vylon-gold">
-          </div>
-        </div>
-
-        <div id="public-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          </div>
-      </div>
-    </section>
-
-    <section id="view-affiliate-auth" class="hidden max-w-md mx-auto bg-vylon-cardBg rounded-2xl border border-vylon-border overflow-hidden shadow-2xl">
-      <div class="p-5 border-b border-vylon-border flex justify-between items-center">
-        <div>
-          <h2 class="text-base font-bold text-white">Programa de Afiliados VYLON</h2>
-          <p class="text-[11px] text-gray-400">Genera comisiones por ventas compartidas</p>
-        </div>
-        <button onclick="showView('store')" class="text-xs text-gray-400 hover:text-white">
-          <i class="fa-solid fa-xmark text-base"></i>
-        </button>
-      </div>
-
-      <div class="flex border-b border-vylon-border bg-vylon-inputBg">
-        <button id="btn-tab-login" onclick="switchAffiliateTab('login')" class="w-1/2 py-2.5 text-center transition text-xs font-bold tab-active">
-          Acceso
-        </button>
-        <button id="btn-tab-register" onclick="switchAffiliateTab('register')" class="w-1/2 py-2.5 text-center transition text-xs font-bold tab-inactive">
-          Registro
-        </button>
-      </div>
-
-      <div class="p-5">
-        <form id="form-affiliate-login" onsubmit="handleAffiliateLogin(event)" class="space-y-4">
-          <div>
-            <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Alias (Usuario)</label>
-            <input type="text" id="login-alias" required placeholder="ej: william" class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white focus:outline-none focus:border-vylon-gold">
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Contraseña</label>
-            <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white focus:outline-none focus:border-vylon-gold">
-          </div>
-          <button type="submit" class="w-full bg-vylon-gold hover:bg-vylon-goldHover text-black font-bold py-2 rounded-lg text-xs transition">
-            Entrar al Panel de Afiliado
-          </button>
-        </form>
-
-        <form id="form-affiliate-register" onsubmit="handleAffiliateRegister(event)" class="space-y-3 hidden">
-          <div>
-            <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Alias (Único)</label>
-            <input type="text" id="reg-alias" required placeholder="ej: william" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white focus:outline-none focus:border-vylon-gold">
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Contraseña Clave</label>
-            <input type="password" id="reg-password" required placeholder="••••••••" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white focus:outline-none focus:border-vylon-gold">
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Banco (Código)</label>
-              <input type="text" id="reg-bank" required placeholder="0102" maxlength="4" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white focus:outline-none focus:border-vylon-gold">
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Cédula</label>
-              <input type="text" id="reg-cedula" required placeholder="21101658" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white focus:outline-none focus:border-vylon-gold">
-            </div>
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Teléfono Pago Móvil</label>
-            <input type="text" id="reg-phone" required placeholder="04129830982" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white focus:outline-none focus:border-vylon-gold">
-          </div>
-          <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-2 rounded-lg text-xs shadow transition">
-            Registrarse e Iniciar Sesión
-          </button>
-        </form>
-      </div>
-    </section>
-
-    <section id="view-affiliate-dashboard" class="hidden space-y-6">
-      <div class="bg-vylon-cardBg p-5 rounded-2xl border border-vylon-border flex justify-between items-center">
-        <div>
-          <span class="text-[10px] bg-amber-500/10 text-vylon-gold border border-vylon-gold/20 px-2 py-0.5 rounded font-mono">Panel de Afiliado</span>
-          <h2 class="text-xl font-bold text-white mt-1">Hola, <span id="dash-affiliate-alias" class="text-vylon-gold"></span></h2>
-        </div>
-        <button onclick="logoutAffiliate()" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition">
-          Cerrar Sesión
-        </button>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-vylon-cardBg p-4 rounded-xl border border-vylon-border">
-          <p class="text-[11px] text-gray-400 font-bold uppercase">Ventas Referidas</p>
-          <h3 id="dash-sales-count" class="text-2xl font-black text-white mt-1">0</h3>
-        </div>
-        <div class="bg-vylon-cardBg p-4 rounded-xl border border-vylon-border">
-          <p class="text-[11px] text-gray-400 font-bold uppercase">Saldo Acumulado</p>
-          <h3 id="dash-balance-usd" class="text-2xl font-black text-vylon-gold mt-1">$0.00</h3>
-        </div>
-        <div class="bg-vylon-cardBg p-4 rounded-xl border border-vylon-border text-xs text-gray-300">
-          <p class="text-[11px] text-gray-400 font-bold uppercase mb-1">Pago Móvil Asignado</p>
-          <p><strong>Banco:</strong> <span id="dash-bank"></span></p>
-          <p><strong>Teléfono:</strong> <span id="dash-phone"></span></p>
-          <p><strong>Cédula:</strong> <span id="dash-cedula"></span></p>
-        </div>
-      </div>
-
-      <div class="bg-vylon-cardBg p-5 rounded-2xl border border-vylon-border space-y-4">
-        <h3 class="text-sm font-bold text-white uppercase tracking-wider">Enlaces de Referido por Producto</h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-gray-300">
-            <thead class="bg-vylon-inputBg border-b border-vylon-border text-vylon-gold">
-              <tr>
-                <th class="p-2.5">Producto</th>
-                <th class="p-2.5">Stock</th>
-                <th class="p-2.5">Precio</th>
-                <th class="p-2.5 text-right">Acción</th>
-              </tr>
-            </thead>
-            <tbody id="affiliate-stock-tbody" class="divide-y divide-vylon-border">
-              </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <section id="view-admin-dashboard" class="hidden space-y-6">
-      <div class="bg-vylon-cardBg p-4 rounded-2xl border border-vylon-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div class="flex items-center gap-2">
-          <a href="#" onclick="showView('store')" class="text-xs text-vylon-gold hover:underline mr-2">← Catálogo</a>
-          <h2 class="text-lg font-extrabold tracking-wider text-vylon-gold uppercase">PANEL ADMINISTRATIVO</h2>
-        </div>
-        <button onclick="logoutAdmin()" class="bg-zinc-800 hover:bg-zinc-700 text-gray-300 border border-zinc-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">
-          Salir
-        </button>
-      </div>
-
-      <div class="flex overflow-x-auto gap-2 p-1.5 bg-vylon-cardBg border border-vylon-border rounded-xl custom-scrollbar text-xs font-semibold">
-        <button onclick="switchAdminTab('panel', this)" class="admin-tab-btn bg-vylon-gold text-black px-3 py-2 rounded-lg whitespace-nowrap font-bold">
-          <i class="fa-solid fa-chart-pie mr-1"></i> Resumen
-        </button>
-        <button onclick="switchAdminTab('productos', this)" class="admin-tab-btn text-gray-400 hover:text-white px-3 py-2 rounded-lg whitespace-nowrap">
-          <i class="fa-solid fa-box mr-1"></i> Productos y Stock
-        </button>
-        <button onclick="switchAdminTab('historial', this)" class="admin-tab-btn text-gray-400 hover:text-white px-3 py-2 rounded-lg whitespace-nowrap">
-          <i class="fa-solid fa-receipt mr-1"></i> Historial de Ventas
-        </button>
-        <button onclick="switchAdminTab('configuracion', this)" class="admin-tab-btn text-gray-400 hover:text-white px-3 py-2 rounded-lg whitespace-nowrap">
-          <i class="fa-solid fa-gear mr-1"></i> Configuración Telegram / Pago Móvil
-        </button>
-      </div>
-
-      <div id="admin-subtab-panel" class="admin-subtab-content space-y-6">
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div class="bg-vylon-cardBg p-4 rounded-xl border border-vylon-border">
-            <span class="text-[10px] text-gray-400 uppercase font-bold">TOTAL PRODUCTOS</span>
-            <h3 id="stat-total-products" class="text-2xl font-black text-white mt-1">0</h3>
-          </div>
-          <div class="bg-vylon-cardBg p-4 rounded-xl border border-vylon-border">
-            <span class="text-[10px] text-gray-400 uppercase font-bold">TOTAL STOCK</span>
-            <h3 id="stat-total-stock" class="text-2xl font-black text-amber-400 mt-1">0</h3>
-          </div>
-          <div class="bg-vylon-cardBg p-4 rounded-xl border border-vylon-border">
-            <span class="text-[10px] text-gray-400 uppercase font-bold">ALERTAS DE STOCK (<5)</span>
-            <h3 id="stat-total-low-stock" class="text-2xl font-black text-red-500 mt-1">0</h3>
-          </div>
-        </div>
-
-        <div class="bg-vylon-cardBg p-4 rounded-xl border border-vylon-border">
-          <h4 class="text-xs font-bold text-gray-300 uppercase mb-3">Nivel de Stock por Producto</h4>
-          <div class="h-56 relative">
-            <canvas id="chartStockOverview"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <div id="admin-subtab-productos" class="admin-subtab-content hidden space-y-4">
-        <div class="flex justify-between items-center bg-vylon-cardBg p-4 rounded-xl border border-vylon-border">
-          <button onclick="openNewProductModal()" class="bg-vylon-gold hover:bg-vylon-goldHover text-black font-bold px-4 py-2 rounded-lg text-xs shadow flex items-center gap-1.5 transition">
-            <i class="fa-solid fa-plus"></i>
-            <span>Nuevo Producto</span>
-          </button>
-          <button onclick="exportJSON()" class="bg-vylon-inputBg border border-vylon-border text-gray-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold">
-            <i class="fa-solid fa-download mr-1"></i> Exportar JSON
-          </button>
-        </div>
-
-        <div class="bg-vylon-cardBg p-4 rounded-xl border border-vylon-border space-y-3">
-          <h4 class="text-xs font-bold text-white uppercase">Lista de Productos</h4>
-          <div id="admin-product-list" class="space-y-3">
-            </div>
-        </div>
-      </div>
-
-      <div id="admin-subtab-historial" class="admin-subtab-content hidden space-y-3">
-        <div class="bg-vylon-cardBg p-4 rounded-xl border border-vylon-border flex justify-between items-center">
-          <span class="text-xs text-gray-400 font-bold">VENTAS REGISTRADAS</span>
-          <span id="historial-total-val" class="text-xs text-vylon-gold font-bold">$0.00 USDT</span>
-        </div>
-        <div class="space-y-2" id="history-container">
-          </div>
-      </div>
-
-      <div id="admin-subtab-configuracion" class="admin-subtab-content hidden space-y-4">
-        <div class="bg-vylon-cardBg p-5 rounded-xl border border-vylon-border space-y-4">
-          <h4 class="text-xs font-bold text-vylon-gold uppercase">Credenciales Bot de Telegram</h4>
-          <div>
-            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">TOKEN DE BOT</label>
-            <input type="text" id="cfg-telegram-token" class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white">
-          </div>
-          <div>
-            <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">ID DE CHAT (ADMINISTRADOR)</label>
-            <input type="text" id="cfg-telegram-chatid" class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white">
-          </div>
-
-          <h4 class="text-xs font-bold text-vylon-gold uppercase pt-2">Datos para Pago Móvil</h4>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Teléfono</label>
-              <input type="text" id="cfg-phone" class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white">
-            </div>
-            <div>
-              <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Banco (Ej: 0102)</label>
-              <input type="text" id="cfg-bank" class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white">
-            </div>
-            <div>
-              <label class="block text-[10px] text-gray-400 uppercase font-bold mb-1">Cédula</label>
-              <input type="text" id="cfg-cedula" class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white">
-            </div>
-          </div>
-          <button onclick="saveConfigSettings()" class="bg-vylon-gold text-black font-bold px-4 py-2 rounded-lg text-xs shadow">
-            Guardar Configuración
-          </button>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <div id="modal-product-detail" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-vylon-cardBg border border-vylon-border rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-4 my-8">
-      <button onclick="closeProductDetailModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
-        <i class="fa-solid fa-xmark text-lg"></i>
-      </button>
-
-      <div class="flex flex-col sm:flex-row gap-4">
-        <div class="w-full sm:w-1/2 h-48 bg-vylon-inputBg rounded-xl overflow-hidden flex items-center justify-center border border-vylon-border">
-          <img id="detail-prod-img" src="" class="w-full h-full object-cover" alt="Producto">
-        </div>
-        <div class="w-full sm:w-1/2 flex flex-col justify-between space-y-2">
-          <div>
-            <span id="detail-prod-sku" class="text-[10px] font-mono text-gray-500 uppercase"></span>
-            <h3 id="detail-prod-title" class="text-base font-bold text-white"></h3>
-            <p id="detail-prod-desc" class="text-xs text-gray-400 mt-1"></p>
-          </div>
-          <div class="pt-2 border-t border-vylon-border">
-            <span class="text-xs text-gray-400">Precio Unitario:</span>
-            <div class="text-xl font-extrabold text-vylon-gold" id="detail-prod-price-usdt"></div>
-            <div class="text-xs text-gray-400" id="detail-prod-price-bs"></div>
-            <p class="text-[10px] mt-1 text-amber-400">Stock Disponible: <span id="detail-prod-stock-num"></span></p>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-vylon-inputBg p-4 rounded-xl border border-vylon-border space-y-3">
-        <h4 class="text-xs font-bold text-white uppercase tracking-wider">Iniciar Compra Directa</h4>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">Tu Nombre</label>
-            <input type="text" id="buy-client-name" placeholder="Ej: William Lugo" class="w-full px-3 py-1.5 bg-vylon-cardBg border border-vylon-border rounded-lg text-xs text-white">
-          </div>
-          <div>
-            <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">Cantidad</label>
-            <input type="number" id="buy-client-qty" value="1" min="1" oninput="updateBuyTotalCalc()" class="w-full px-3 py-1.5 bg-vylon-cardBg border border-vylon-border rounded-lg text-xs text-white">
-          </div>
-        </div>
-        <div class="flex justify-between items-center text-xs font-bold pt-1">
-          <span class="text-gray-400">Monto Total:</span>
-          <span id="buy-calc-total" class="text-vylon-gold text-sm">$0.00 USDT</span>
-        </div>
-        <button onclick="proceedToCheckout()" class="w-full bg-vylon-gold hover:bg-vylon-goldHover text-black font-bold py-2 rounded-lg text-xs transition flex items-center justify-center gap-1.5">
-          <i class="fa-solid fa-credit-card"></i>
-          <span>Ir a Pagar por Pago Móvil</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-checkout" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-vylon-cardBg border border-vylon-border rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4 my-8">
-      <button onclick="closeCheckoutModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
-        <i class="fa-solid fa-xmark text-lg"></i>
-      </button>
-
-      <div id="checkout-step-upload" class="space-y-4">
-        <div class="text-center">
-          <span class="text-[10px] font-mono text-vylon-gold uppercase">Paso Final</span>
-          <h3 class="text-base font-bold text-white">Realiza el Pago Móvil</h3>
-          <p class="text-xs text-gray-400 mt-0.5">Transfiera los datos especificados y adjunte la captura</p>
-        </div>
-
-        <div class="bg-vylon-inputBg p-3 rounded-xl border border-vylon-border text-xs space-y-1">
-          <p class="text-vylon-gold font-bold">Datos de Transferencia:</p>
-          <p><strong>Banco:</strong> <span id="checkout-pay-bank"></span></p>
-          <p><strong>Teléfono:</strong> <span id="checkout-pay-phone"></span></p>
-          <p><strong>Cédula:</strong> <span id="checkout-pay-cedula"></span></p>
-          <p class="pt-1 text-white font-bold">Total a Transferir: <span id="checkout-pay-total-bs" class="text-amber-400"></span></p>
-        </div>
-
-        <div>
-          <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Captura del Pago Móvil</label>
-          <div class="border-2 border-dashed border-vylon-border rounded-xl p-4 text-center cursor-pointer hover:border-vylon-gold transition" onclick="document.getElementById('checkout-file-input').click()">
-            <div id="checkout-photo-placeholder" class="space-y-1">
-              <i class="fa-solid fa-cloud-arrow-up text-2xl text-vylon-gold"></i>
-              <p class="text-[11px] text-gray-400">Haz clic aquí para seleccionar la imagen del comprobante</p>
-            </div>
-            <img id="checkout-photo-preview" class="hidden max-h-40 mx-auto rounded-lg object-cover" alt="Comprobante">
-          </div>
-          <input type="file" id="checkout-file-input" accept="image/*" class="hidden" onchange="previewCheckoutPhoto(event)">
-        </div>
-
-        <button onclick="submitOrderAndSendTelegram()" class="w-full bg-vylon-gold hover:bg-vylon-goldHover text-black font-bold py-2.5 rounded-lg text-xs transition flex items-center justify-center gap-2">
-          <i class="fa-paper-plane"></i>
-          <span>Enviar Comprobante a Telegram</span>
-        </button>
-      </div>
-
-      <div id="checkout-step-waiting" class="hidden text-center py-6 space-y-4">
-        <div class="w-16 h-16 border-4 border-vylon-gold border-t-transparent rounded-full animate-spin mx-auto"></div>
-        <h3 class="text-base font-bold text-white">Esperando Confirmación...</h3>
-        <p class="text-xs text-gray-400 max-w-xs mx-auto">
-          Hemos enviado tu comprobante al administrador por Telegram. Tu pantalla se actualizará automáticamente en cuanto el pago sea verificado.
-        </p>
-        <div class="p-3 bg-vylon-inputBg rounded-xl border border-vylon-border text-left text-xs space-y-1">
-          <p class="text-gray-400">ID de Transacción: <span id="wait-tx-id" class="text-white font-mono"></span></p>
-          <p class="text-gray-400">Estado: <span id="wait-tx-status" class="text-amber-400 font-bold">PROCESANDO</span></p>
-        </div>
-      </div>
-
-      <div id="checkout-step-result" class="hidden text-center py-6 space-y-4">
-        <div id="result-icon-container"></div>
-        <h3 id="result-title" class="text-lg font-bold"></h3>
-        <p id="result-msg" class="text-xs text-gray-300 max-w-xs mx-auto"></p>
-        <button onclick="closeCheckoutModal(); showView('store')" class="bg-vylon-gold text-black font-bold px-6 py-2 rounded-lg text-xs">
-          Entendido
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-admin-auth" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-vylon-cardBg border border-vylon-border rounded-2xl max-w-sm w-full p-6 shadow-2xl relative">
-      <button onclick="closeAdminAuthModal()" class="absolute top-3 right-3 text-gray-500 hover:text-white">
-        <i class="fa-solid fa-xmark text-lg"></i>
-      </button>
-      <div class="text-center mb-4">
-        <div class="w-10 h-10 bg-amber-500/10 text-vylon-gold rounded-full flex items-center justify-center mx-auto mb-2 border border-vylon-gold/20">
-          <i class="fa-solid fa-lock"></i>
-        </div>
-        <h3 class="text-base font-bold text-white">Acceso Admin</h3>
-      </div>
-      <form onsubmit="handleAdminAuth(event)" class="space-y-4">
-        <div>
-          <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Correo Electrónico</label>
-          <input type="email" id="auth-admin-email" required placeholder="utrera930@gmail.com" class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white">
-        </div>
-        <div>
-          <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Contraseña</label>
-          <input type="password" id="auth-admin-pass" required placeholder="••••••••" class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white">
-        </div>
-        <button type="submit" class="w-full bg-vylon-gold text-black font-bold py-2 rounded-lg text-xs">
-          Ingresar →
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <div id="modal-new-product" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-vylon-cardBg border border-vylon-border rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 my-8">
-      <div class="flex justify-between items-center border-b border-vylon-border pb-3">
-        <h3 class="text-sm font-extrabold text-vylon-gold uppercase">Agregar Nuevo Producto</h3>
-        <button onclick="closeNewProductModal()" class="text-gray-400 hover:text-white">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-      <form onsubmit="handleSaveProduct(event)" class="space-y-3">
-        <div>
-          <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Imagen del Producto</label>
-          <div class="border-2 border-dashed border-vylon-border rounded-xl p-3 text-center cursor-pointer hover:border-vylon-gold transition" onclick="document.getElementById('prod-photo-input').click()">
-            <div id="photo-preview-container" class="space-y-1">
-              <i class="fa-solid fa-camera text-xl text-vylon-gold"></i>
-              <p class="text-[10px] text-gray-400">Toma o sube una imagen</p>
-            </div>
-            <img id="photo-preview-img" class="hidden max-h-32 mx-auto rounded-lg object-cover" alt="Preview">
-          </div>
-          <input type="file" id="prod-photo-input" accept="image/*" class="hidden" onchange="previewPhoto(event)">
-        </div>
-
-        <div>
-          <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nombre</label>
-          <input type="text" id="prod-name" required placeholder="Nombre del producto" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white">
-        </div>
-
-        <div>
-          <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Descripción</label>
-          <textarea id="prod-desc" rows="2" placeholder="Detalles del producto" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white"></textarea>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Precio (USDT)</label>
-            <input type="number" step="0.01" id="prod-price" required placeholder="0.00" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white">
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Stock Inicial</label>
-            <input type="number" id="prod-stock" required placeholder="0" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Código / SKU</label>
-          <input type="text" id="prod-code" required placeholder="SKU (ej: 7599000002730)" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white">
-        </div>
-
-        <div class="flex gap-2 pt-2">
-          <button type="button" onclick="closeNewProductModal()" class="w-1/2 py-2 bg-zinc-800 text-gray-300 font-bold rounded-lg text-xs">
-            Cancelar
-          </button>
-          <button type="submit" class="w-1/2 py-2 bg-vylon-gold text-black font-bold rounded-lg text-xs shadow">
-            Guardar Producto
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div id="modal-restock" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-vylon-cardBg border border-vylon-border rounded-2xl max-w-xs w-full p-5 shadow-2xl space-y-4 relative">
-      <button onclick="closeRestockModal()" class="absolute top-3 right-3 text-gray-500 hover:text-white">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-      <h3 class="text-sm font-bold text-vylon-gold">Reabastecer Stock</h3>
-      <p id="restock-prod-title" class="text-xs font-semibold text-gray-300"></p>
-      <form onsubmit="handleConfirmRestock(event)" class="space-y-3">
-        <input type="hidden" id="restock-prod-id">
-        <div>
-          <input type="number" id="restock-amount" required min="1" placeholder="Cantidad a sumar" class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white">
-        </div>
-        <button type="submit" class="w-full bg-vylon-gold text-black font-bold py-2 rounded-lg text-xs">
-          Confirmar Reabastecimiento
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <div onclick="openAdminAuthModal()" title="Acceso Admin" class="fixed bottom-2 right-2 w-3 h-3 bg-red-600/80 rounded-full cursor-pointer hover:scale-150 transition-transform z-40"></div>
-
-  <footer class="bg-vylon-cardBg border-t border-vylon-border text-gray-500 text-[11px] py-4 text-center">
-    <p>&copy; 2026 VYLON Stock & Flow. Todos los derechos reservados.</p>
-  </footer>
-
-  <script>
-    // CONFIGURACIÓN INICIAL DE TASA Y TELEGRAM
-    const TASA_BCV = 785.07;
-    
-    let configSettings = JSON.parse(localStorage.getItem('vylon_cfg')) || {
-      telegramToken: '8732196907:AAHJzrerpggn6yPBZF0s0u2N1Vgf00T1SnU',
-      telegramChatId: '1849273488',
-      phone: '04129830982',
-      bank: '0102 venezuela',
-      cedula: '21101658'
-    };
-
-    const defaultProducts = [
-      {
-        id: 'p1',
-        name: 'Bicarbonato de Sodio BicarBix 150g',
-        code: '7599063000063',
-        price: 2.00,
-        stock: 98,
-        desc: 'Bicarbonato de sodio multiusos para el hogar y cocina.',
-        image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
-      },
-      {
-        id: 'p2',
-        name: 'Vick VapoRub 12 g',
-        code: '75916565',
-        price: 1.50,
-        stock: 4, // Stock < 5 para prueba de alerta
-        desc: 'Ungüento tópico para aliviar síntomas del resfriado.',
-        image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
-      },
-      {
-        id: 'p3',
-        name: 'Desodorante Lady Speed Stick',
-        code: '7501033207280',
-        price: 1.50,
-        stock: 12,
-        desc: 'Protección clínica antibacterial contra la sudoración.',
-        image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
-      }
-    ];
-
-    if (!localStorage.getItem('vylon_db_products')) {
-      localStorage.setItem('vylon_db_products', JSON.stringify(defaultProducts));
-    }
-    if (!localStorage.getItem('vylon_db_affiliates')) {
-      localStorage.setItem('vylon_db_affiliates', JSON.stringify({}));
-    }
-    if (!localStorage.getItem('vylon_db_history')) {
-      localStorage.setItem('vylon_db_history', JSON.stringify([]));
-    }
-
-    // VARIABLES GLOBALES DE ESTADO
-    let currentSelectedProduct = null;
-    let checkoutFileBlob = null;
-    let currentTxId = null;
-    let pollingInterval = null;
-    let tempPhotoBase64 = null;
-    let chartStockInstance = null;
-
-    // APLICAR CONFIGURACIÓN AL CARGAR
-    function applyConfigToInputs() {
-      document.getElementById('cfg-telegram-token').value = configSettings.telegramToken;
-      document.getElementById('cfg-telegram-chatid').value = configSettings.telegramChatId;
-      document.getElementById('cfg-phone').value = configSettings.phone;
-      document.getElementById('cfg-bank').value = configSettings.bank;
-      document.getElementById('cfg-cedula').value = configSettings.cedula;
-    }
-
-    function saveConfigSettings() {
-      configSettings = {
-        telegramToken: document.getElementById('cfg-telegram-token').value.trim(),
-        telegramChatId: document.getElementById('cfg-telegram-chatid').value.trim(),
-        phone: document.getElementById('cfg-phone').value.trim(),
-        bank: document.getElementById('cfg-bank').value.trim(),
-        cedula: document.getElementById('cfg-cedula').value.trim()
-      };
-      localStorage.setItem('vylon_cfg', JSON.stringify(configSettings));
-      alert('Configuración guardada correctamente');
-    }
-
-    // NAVEGACIÓN ENTRE VISTAS
-    function showView(viewName) {
-      document.getElementById('view-store').classList.add('hidden');
-      document.getElementById('view-affiliate-auth').classList.add('hidden');
-      document.getElementById('view-affiliate-dashboard').classList.add('hidden');
-      document.getElementById('view-admin-dashboard').classList.add('hidden');
-
-      if (viewName === 'store') {
-        document.getElementById('view-store').classList.remove('hidden');
-        renderPublicStore();
-      } else if (viewName === 'affiliate-auth') {
-        const session = sessionStorage.getItem('vylon_session_affiliate');
-        if (session) {
-          renderAffiliateDashboard(JSON.parse(session));
-          document.getElementById('view-affiliate-dashboard').classList.remove('hidden');
-        } else {
-          document.getElementById('view-affiliate-auth').classList.remove('hidden');
-        }
-      } else if (viewName === 'admin') {
-        document.getElementById('view-admin-dashboard').classList.remove('hidden');
-        applyConfigToInputs();
-        renderAdminDashboard();
-      }
-    }
-
-    // RENDERIZAR TIENDA PÚBLICA
-    function renderPublicStore() {
-      const products = JSON.parse(localStorage.getItem('vylon_db_products') || '[]');
-      const query = document.getElementById('public-search').value.toLowerCase().trim();
-      const grid = document.getElementById('public-grid');
-      grid.innerHTML = '';
-
-      const filtered = products.filter(p => p.name.toLowerCase().includes(query) || p.code.includes(query));
-
-      if (filtered.length === 0) {
-        grid.innerHTML = `<div class="col-span-full text-center py-8 text-gray-500 text-xs">No hay productos en el inventario.</div>`;
-        return;
-      }
-
-      filtered.forEach(p => {
-        const bsPrice = (p.price * TASA_BCV).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const card = document.createElement('div');
-        card.className = "bg-vylon-cardBg border border-vylon-border rounded-xl p-3 flex flex-col justify-between hover:border-vylon-gold/50 transition shadow-lg";
-        card.innerHTML = `
-          <div>
-            <div onclick="openProductDetailModal('${p.id}')" class="w-full h-36 bg-vylon-inputBg rounded-lg overflow-hidden flex items-center justify-center mb-3 cursor-pointer group relative">
-              <img src="${p.image}" class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" alt="${p.name}">
-              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-vylon-gold font-bold text-xs gap-1">
-                <i class="fa-solid fa-eye"></i> Ver Detalles
-              </div>
-            </div>
-            <p class="text-[10px] font-mono text-gray-500">${p.code}</p>
-            <h4 onclick="openProductDetailModal('${p.id}')" class="font-bold text-white text-xs line-clamp-2 mt-0.5 cursor-pointer hover:text-vylon-gold">${p.name}</h4>
-            <p class="text-[10px] text-gray-400 mt-1">Stock: <span class="font-bold ${p.stock < 5 ? 'text-red-500' : 'text-amber-400'}">${p.stock}</span></p>
-          </div>
-          <div class="mt-3 pt-2 border-t border-vylon-border flex justify-between items-center">
-            <div>
-              <p class="text-sm font-extrabold text-vylon-gold">$${p.price.toFixed(2)} USDT</p>
-              <p class="text-[10px] text-gray-400">Bs. ${bsPrice}</p>
-            </div>
-            <button onclick="openProductDetailModal('${p.id}')" class="bg-vylon-gold hover:bg-vylon-goldHover text-black px-3 py-1 rounded-lg text-xs font-bold transition">
-              Comprar
-            </button>
-          </div>
-        `;
-        grid.appendChild(card);
-      });
-    }
-
-    // ABRIR Y CONTROLAR MODAL DE DETALLES DEL PRODUCTO
-    function openProductDetailModal(id) {
-      const products = JSON.parse(localStorage.getItem('vylon_db_products') || '[]');
-      currentSelectedProduct = products.find(p => p.id === id);
-
-      if (!currentSelectedProduct) return;
-
-      const bsPrice = (currentSelectedProduct.price * TASA_BCV).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-      document.getElementById('detail-prod-img').src = currentSelectedProduct.image;
-      document.getElementById('detail-prod-sku').textContent = 'SKU: ' + currentSelectedProduct.code;
-      document.getElementById('detail-prod-title').textContent = currentSelectedProduct.name;
-      document.getElementById('detail-prod-desc').textContent = currentSelectedProduct.desc || 'Sin descripción adicional.';
-      document.getElementById('detail-prod-price-usdt').textContent = '$' + currentSelectedProduct.price.toFixed(2) + ' USDT';
-      document.getElementById('detail-prod-price-bs').textContent = 'Bs. ' + bsPrice + ' (Tasa BCV)';
-      document.getElementById('detail-prod-stock-num').textContent = currentSelectedProduct.stock;
-
-      document.getElementById('buy-client-qty').value = 1;
-      updateBuyTotalCalc();
-
-      document.getElementById('modal-product-detail').classList.remove('hidden');
-    }
-
-    function closeProductDetailModal() {
-      document.getElementById('modal-product-detail').classList.add('hidden');
-    }
-
-    function updateBuyTotalCalc() {
-      if (!currentSelectedProduct) return;
-      const qty = parseInt(document.getElementById('buy-client-qty').value) || 1;
-      const total = currentSelectedProduct.price * qty;
-      document.getElementById('buy-calc-total').textContent = '$' + total.toFixed(2) + ' USDT';
-    }
-
-    // PASO A CHECKOUT Y PAGO MÓVIL
-    function proceedToCheckout() {
-      const clientName = document.getElementById('buy-client-name').value.trim();
-      if (!clientName) {
-        alert('Por favor, ingresa tu nombre para continuar.');
-        return;
-      }
-
-      closeProductDetailModal();
-
-      document.getElementById('checkout-pay-bank').textContent = configSettings.bank;
-      document.getElementById('checkout-pay-phone').textContent = configSettings.phone;
-      document.getElementById('checkout-pay-cedula').textContent = configSettings.cedula;
-
-      const qty = parseInt(document.getElementById('buy-client-qty').value) || 1;
-      const totalUSD = currentSelectedProduct.price * qty;
-      const totalBs = (totalUSD * TASA_BCV).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-      document.getElementById('checkout-pay-total-bs').textContent = 'Bs. ' + totalBs + ' ($' + totalUSD.toFixed(2) + ' USDT)';
-
-      document.getElementById('checkout-step-upload').classList.remove('hidden');
-      document.getElementById('checkout-step-waiting').classList.add('hidden');
-      document.getElementById('checkout-step-result').classList.add('hidden');
-
-      document.getElementById('modal-checkout').classList.remove('hidden');
-    }
-
-    function closeCheckoutModal() {
-      if (pollingInterval) clearInterval(pollingInterval);
-      document.getElementById('modal-checkout').classList.add('hidden');
-    }
-
-    function previewCheckoutPhoto(e) {
-      const file = e.target.files[0];
-      if (file) {
-        checkoutFileBlob = file;
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          const img = document.getElementById('checkout-photo-preview');
-          img.src = evt.target.result;
-          img.classList.remove('hidden');
-          document.getElementById('checkout-photo-placeholder').classList.add('hidden');
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-
-    // ENVÍO DEL COMPROBANTE A TELEGRAM CON BOTONES INTERACTIVOS Y MONITOREO
-    async function submitOrderAndSendTelegram() {
-      if (!checkoutFileBlob) {
-        alert('Debes adjuntar la imagen de la captura del Pago Móvil.');
-        return;
-      }
-
-      const clientName = document.getElementById('buy-client-name').value.trim();
-      const qty = parseInt(document.getElementById('buy-client-qty').value) || 1;
-      const totalUSD = currentSelectedProduct.price * qty;
-      const totalBs = (totalUSD * TASA_BCV).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      currentTxId = 'TX-' + Math.floor(100000 + Math.random() * 900000);
-
-      document.getElementById('checkout-step-upload').classList.add('hidden');
-      document.getElementById('checkout-step-waiting').classList.remove('hidden');
-      document.getElementById('wait-tx-id').textContent = currentTxId;
-
-      const caption = `🛒 <b>NUEVA COMPRA PENDIENTE</b>\n\n` +
-                      `<b>Transacción:</b> <code>${currentTxId}</code>\n` +
-                      `<b>Cliente:</b> ${clientName}\n` +
-                      `<b>Producto:</b> ${currentSelectedProduct.name}\n` +
-                      `<b>Cantidad:</b> ${qty}\n` +
-                      `<b>Monto Total:</b> $${totalUSD.toFixed(2)} USDT (Bs. ${totalBs})\n\n` +
-                      ` Por favor verifica en tu banco y presiona una opción:`;
-
-      const keyboard = {
-        inline_keyboard: [
-          [
-            { text: "✅ VERIFICADO", callback_data: `verify_${currentTxId}_${currentSelectedProduct.id}_${qty}` },
-            { text: "❌ RECHAZADO", callback_data: `reject_${currentTxId}` }
-          ]
-        ]
-      };
-
-      const formData = new FormData();
-      formData.append('chat_id', configSettings.telegramChatId);
-      formData.append('photo', checkoutFileBlob);
-      formData.append('caption', caption);
-      formData.append('parse_mode', 'HTML');
-      formData.append('reply_markup', JSON.stringify(keyboard));
-
-      try {
-        const url = `https://api.telegram.org/bot${configSettings.telegramToken}/sendPhoto`;
-        await fetch(url, { method: 'POST', body: formData });
-        
-        // Iniciar monitoreo en tiempo real de la respuesta del administrador desde Telegram
-        startTelegramPolling();
-      } catch (err) {
-        console.error('Error enviando a Telegram:', err);
-        alert('Ocurrió un error al enviar a Telegram. Revisa el Token y Chat ID en Configuración.');
-      }
-    }
-
-    // MONITOREO DE BOTONES DE TELEGRAM (LONG POLLING DE ESTADO)
-    function startTelegramPolling() {
-      let lastUpdateId = 0;
-
-      pollingInterval = setInterval(async () => {
-        try {
-          const url = `https://api.telegram.org/bot${configSettings.telegramToken}/getUpdates?offset=${lastUpdateId + 1}`;
-          const res = await fetch(url);
-          const data = await res.json();
-
-          if (data.ok && data.result.length > 0) {
-            for (const update of data.result) {
-              lastUpdateId = update.update_id;
-
-              if (update.callback_query) {
-                const callbackData = update.callback_query.data;
-
-                if (callbackData.includes(currentTxId)) {
-                  clearInterval(pollingInterval);
-
-                  if (callbackData.startsWith('verify_')) {
-                    const parts = callbackData.split('_');
-                    const prodId = parts[2];
-                    const qty = parseInt(parts[3]);
-                    handlePaymentApproved(prodId, qty);
-                  } else if (callbackData.startsWith('reject_')) {
-                    handlePaymentRejected();
-                  }
-
-                  // Confirmar a Telegram que la interacción fue recibida
-                  fetch(`https://api.telegram.org/bot${configSettings.telegramToken}/answerCallbackQuery?callback_query_id=${update.callback_query.id}`);
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VYLON | Control de Inventario & Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        blood: {
+                            500: '#dc2626',
+                            600: '#b91c1c',
+                            700: '#991b1b',
+                            800: '#8b0000',
+                            900: '#450a0a',
+                        },
+                        vylon: {
+                            bg: '#121212',
+                            card: '#18181b',
+                            border: '#27272a',
+                        }
+                    }
                 }
-              }
             }
-          }
-        } catch (e) {
-          console.error("Error en polling:", e);
         }
-      }, 2500);
-    }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #121212; color: #ffffff; }
+        .glow-blood { box-shadow: 0 0 12px rgba(220, 38, 38, 0.3); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-vylon-bg text-white">
 
-    // MANEJO DE RESULTADOS DE PAGO
-    function handlePaymentApproved(prodId, qty) {
-      // 1. Descontar stock
-      const products = JSON.parse(localStorage.getItem('vylon_db_products') || '[]');
-      const prod = products.find(p => p.id === prodId);
-
-      if (prod) {
-        prod.stock = Math.max(0, prod.stock - qty);
-        localStorage.setItem('vylon_db_products', JSON.stringify(products));
-
-        // NOTIFICACIÓN AUTOMÁTICA EN TELEGRAM SI STOCK ES INFERIOR A 5
-        checkAndNotifyLowStock(prod);
-      }
-
-      // 2. Registrar en historial
-      const history = JSON.parse(localStorage.getItem('vylon_db_history') || '[]');
-      history.unshift({
-        txId: currentTxId,
-        product: prod ? prod.name : 'Producto',
-        qty: qty,
-        totalUSD: prod ? prod.price * qty : 0,
-        date: new Date().toLocaleString('es-VE')
-      });
-      localStorage.setItem('vylon_db_history', JSON.stringify(history));
-
-      // 3. Mostrar pantalla final en el cliente
-      document.getElementById('checkout-step-waiting').classList.add('hidden');
-      document.getElementById('checkout-step-result').classList.remove('hidden');
-
-      document.getElementById('result-icon-container').innerHTML = `
-        <div class="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center text-3xl mx-auto border border-green-500/30">
-          <i class="fa-solid fa-circle-check"></i>
+    <header class="bg-vylon-card border-b border-vylon-border px-4 py-3 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-lg font-black tracking-widest text-white uppercase flex items-center gap-2">
+                <i class="fa-solid fa-user-shield text-blood-500"></i> VYLON <span class="text-xs text-blood-500 font-semibold">[ADMIN]</span>
+            </h1>
+            <a href="index.html" class="text-xs bg-blood-900/50 hover:bg-blood-900 text-blood-500 px-3 py-1.5 rounded-lg border border-blood-800 transition">
+                ← Ir al Catálogo
+            </a>
         </div>
-      `;
-      document.getElementById('result-title').textContent = '¡Pago Verificado con Éxito!';
-      document.getElementById('result-title').className = 'text-lg font-bold text-green-400';
-      document.getElementById('result-msg').textContent = 'El administrador ha confirmado tu Pago Móvil. Tu pedido está en camino a tu dirección en Maracay.';
+    </header>
 
-      renderPublicStore();
-    }
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
 
-    function handlePaymentRejected() {
-      document.getElementById('checkout-step-waiting').classList.add('hidden');
-      document.getElementById('checkout-step-result').classList.remove('hidden');
-
-      document.getElementById('result-icon-container').innerHTML = `
-        <div class="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto border border-red-500/30">
-          <i class="fa-solid fa-circle-xmark"></i>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-vylon-card p-4 rounded-xl border border-vylon-border">
+                <p class="text-xs uppercase text-zinc-400 font-semibold">Total Ítems</p>
+                <p id="metric-products" class="text-2xl font-black text-white mt-1">0</p>
+            </div>
+            <div class="bg-vylon-card p-4 rounded-xl border border-vylon-border">
+                <p class="text-xs uppercase text-zinc-400 font-semibold">Stock Total Disponible</p>
+                <p id="metric-stock" class="text-2xl font-black text-emerald-400 mt-1">0</p>
+            </div>
+            <div class="bg-vylon-card p-4 rounded-xl border border-vylon-border">
+                <p class="text-xs uppercase text-zinc-400 font-semibold">Unidades Dañadas / Pérdida</p>
+                <p id="metric-damaged" class="text-2xl font-black text-blood-500 mt-1">0</p>
+            </div>
         </div>
-      `;
-      document.getElementById('result-title').textContent = 'Pago Rechazado';
-      document.getElementById('result-title').className = 'text-lg font-bold text-red-400';
-      document.getElementById('result-msg').textContent = 'No hemos podido verificar la transferencia en la cuenta bancaria. Por favor intenta de nuevo o comunícate con soporte.';
-    }
 
-    // ALERTA AUTOMÁTICA DE STOCK BAJO A TELEGRAM (A PARTIR DE 5 BAJO)
-    async function checkAndNotifyLowStock(product) {
-      if (product.stock < 5) {
-        const message = `⚠️ <b>ALERTA CRÍTICA DE STOCK BAJO</b>\n\n` +
-                        `<b>Producto:</b> ${product.name}\n` +
-                        `<b>Código SKU:</b> <code>${product.code}</code>\n` +
-                        `<b>Stock Actual:</b> <code>${product.stock} unidades</code>\n\n` +
-                        `❗ Por favor, reabastece este producto a la brevedad posible.`;
-
-        try {
-          await fetch(`https://api.telegram.org/bot${configSettings.telegramToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: configSettings.telegramChatId,
-              text: message,
-              parse_mode: 'HTML'
-            })
-          });
-        } catch (e) {
-          console.error("Error enviando alerta de stock bajo:", e);
-        }
-      }
-    }
-
-    // GESTIÓN DEL PROGRAMA DE AFILIADOS
-    function switchAffiliateTab(tab) {
-      const btnLogin = document.getElementById('btn-tab-login');
-      const btnReg = document.getElementById('btn-tab-register');
-      const formLogin = document.getElementById('form-affiliate-login');
-      const formReg = document.getElementById('form-affiliate-register');
-
-      if (tab === 'login') {
-        btnLogin.className = "w-1/2 py-2.5 text-center transition text-xs font-bold tab-active";
-        btnReg.className = "w-1/2 py-2.5 text-center transition text-xs font-bold tab-inactive";
-        formLogin.classList.remove('hidden');
-        formReg.classList.add('hidden');
-      } else {
-        btnLogin.className = "w-1/2 py-2.5 text-center transition text-xs font-bold tab-inactive";
-        btnReg.className = "w-1/2 py-2.5 text-center transition text-xs font-bold tab-active";
-        formLogin.classList.add('hidden');
-        formReg.classList.remove('hidden');
-      }
-    }
-
-    function handleAffiliateRegister(e) {
-      e.preventDefault();
-      const alias = document.getElementById('reg-alias').value.trim().toLowerCase();
-      const password = document.getElementById('reg-password').value.trim();
-      const bank = document.getElementById('reg-bank').value.trim();
-      const phone = document.getElementById('reg-phone').value.trim();
-      const cedula = document.getElementById('reg-cedula').value.trim();
-
-      const affiliates = JSON.parse(localStorage.getItem('vylon_db_affiliates') || '{}');
-
-      if (affiliates[alias]) {
-        alert('El alias ya está registrado. Inicia sesión en la pestaña de Acceso.');
-        return;
-      }
-
-      const newAff = { alias, password, bank, phone, cedula, salesCount: 0, balanceUSD: 0.00 };
-      affiliates[alias] = newAff;
-      localStorage.setItem('vylon_db_affiliates', JSON.stringify(affiliates));
-      sessionStorage.setItem('vylon_session_affiliate', JSON.stringify(newAff));
-
-      showView('affiliate-auth');
-    }
-
-    function handleAffiliateLogin(e) {
-      e.preventDefault();
-      const alias = document.getElementById('login-alias').value.trim().toLowerCase();
-      const password = document.getElementById('login-password').value.trim();
-
-      const affiliates = JSON.parse(localStorage.getItem('vylon_db_affiliates') || '{}');
-      const user = affiliates[alias];
-
-      if (!user || user.password !== password) {
-        alert('Alias o contraseña incorrectos.');
-        return;
-      }
-
-      sessionStorage.setItem('vylon_session_affiliate', JSON.stringify(user));
-      showView('affiliate-auth');
-    }
-
-    function renderAffiliateDashboard(user) {
-      document.getElementById('dash-affiliate-alias').textContent = '@' + user.alias;
-      document.getElementById('dash-sales-count').textContent = user.salesCount || 0;
-      document.getElementById('dash-balance-usd').textContent = '$' + (user.balanceUSD || 0).toFixed(2);
-      document.getElementById('dash-bank').textContent = user.bank;
-      document.getElementById('dash-phone').textContent = user.phone;
-      document.getElementById('dash-cedula').textContent = user.cedula;
-
-      const products = JSON.parse(localStorage.getItem('vylon_db_products') || '[]');
-      const tbody = document.getElementById('affiliate-stock-tbody');
-      tbody.innerHTML = '';
-
-      products.forEach(p => {
-        const tr = document.createElement('tr');
-        const refUrl = `${window.location.origin}${window.location.pathname}?ref=${user.alias}&prod=${p.id}`;
-        tr.innerHTML = `
-          <td class="p-2.5 font-bold text-white">${p.name}</td>
-          <td class="p-2.5 text-amber-400">${p.stock}</td>
-          <td class="p-2.5 text-vylon-gold">$${p.price.toFixed(2)}</td>
-          <td class="p-2.5 text-right">
-            <button onclick="navigator.clipboard.writeText('${refUrl}'); alert('Enlace de afiliado copiado al portapapeles')" class="bg-vylon-inputBg text-vylon-gold border border-vylon-border px-2 py-1 rounded text-[10px] font-bold">
-              Copiar Enlace
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-vylon-card p-4 rounded-xl border border-vylon-border">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-boxes-stacked text-blood-500"></i> Inventario de Productos
+            </h2>
+            <button onclick="openProductModal()" class="w-full sm:w-auto bg-blood-800 hover:bg-blood-700 text-white font-semibold px-4 py-2 rounded-lg border border-blood-600 transition flex items-center justify-center gap-2 text-sm glow-blood">
+                <i class="fa-solid fa-plus"></i> Registrar Producto
             </button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
+        </div>
 
-    function logoutAffiliate() {
-      sessionStorage.removeItem('vylon_session_affiliate');
-      showView('affiliate-auth');
-    }
-
-    // ACCESO ADMIN
-    function openAdminAuthModal() {
-      document.getElementById('modal-admin-auth').classList.remove('hidden');
-    }
-
-    function closeAdminAuthModal() {
-      document.getElementById('modal-admin-auth').classList.add('hidden');
-    }
-
-    function handleAdminAuth(e) {
-      e.preventDefault();
-      const email = document.getElementById('auth-admin-email').value.trim();
-      const pass = document.getElementById('auth-admin-pass').value.trim();
-
-      if (email === 'utrera930@gmail.com' && pass === 'Telefono4*/') {
-        closeAdminAuthModal();
-        sessionStorage.setItem('vylon_admin_logged', 'true');
-        document.getElementById('btn-admin-view-toggle').classList.remove('hidden');
-        showView('admin');
-      } else {
-        alert('Credenciales de administración incorrectas.');
-      }
-    }
-
-    function logoutAdmin() {
-      sessionStorage.removeItem('vylon_admin_logged');
-      document.getElementById('btn-admin-view-toggle').classList.add('hidden');
-      showView('store');
-    }
-
-    function switchAdminTab(subtabName, btnElement) {
-      document.querySelectorAll('.admin-tab-btn').forEach(b => {
-        b.className = "admin-tab-btn text-gray-400 hover:text-white px-3 py-2 rounded-lg whitespace-nowrap";
-      });
-      btnElement.className = "admin-tab-btn bg-vylon-gold text-black px-3 py-2 rounded-lg whitespace-nowrap font-bold";
-
-      document.querySelectorAll('.admin-subtab-content').forEach(c => c.classList.add('hidden'));
-      document.getElementById('admin-subtab-' + subtabName).classList.remove('hidden');
-
-      if (subtabName === 'panel') renderAdminCharts();
-    }
-
-    // PANEL Y TABLAS DE ADMINISTRACIÓN
-    function renderAdminDashboard() {
-      const products = JSON.parse(localStorage.getItem('vylon_db_products') || '[]');
-      const totalStock = products.reduce((a, b) => a + Number(b.stock), 0);
-      const lowStockCount = products.filter(p => p.stock < 5).length;
-
-      document.getElementById('stat-total-products').textContent = products.length;
-      document.getElementById('stat-total-stock').textContent = totalStock;
-      document.getElementById('stat-total-low-stock').textContent = lowStockCount;
-
-      renderAdminProductList();
-      renderAdminHistory();
-      renderAdminCharts();
-    }
-
-    function renderAdminProductList() {
-      const products = JSON.parse(localStorage.getItem('vylon_db_products') || '[]');
-      const container = document.getElementById('admin-product-list');
-      container.innerHTML = '';
-
-      products.forEach(p => {
-        const item = document.createElement('div');
-        item.className = "bg-vylon-inputBg p-3 rounded-xl border border-vylon-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3";
-        item.innerHTML = `
-          <div class="flex items-center gap-3">
-            <img src="${p.image}" class="w-12 h-12 rounded-lg object-cover" alt="">
-            <div>
-              <p class="font-bold text-white text-xs">${p.name}</p>
-              <p class="text-[10px] font-mono text-gray-500">${p.code}</p>
-              <p class="text-[10px] text-vylon-gold font-bold">$${p.price.toFixed(2)} USDT</p>
+        <div class="bg-vylon-card rounded-xl border border-vylon-border overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-zinc-300">
+                    <thead class="bg-vylon-bg uppercase text-xs text-zinc-400 border-b border-vylon-border">
+                        <tr>
+                            <th class="p-4">SKU / Código</th>
+                            <th class="p-4">Producto</th>
+                            <th class="p-4">Precio ($ / Bs.)</th>
+                            <th class="p-4">Stock</th>
+                            <th class="p-4">Dañados</th>
+                            <th class="p-4 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-table-body" class="divide-y divide-vylon-border">
+                        </tbody>
+                </table>
             </div>
-          </div>
-          <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-            <div class="text-right">
-              <span class="text-sm font-extrabold ${p.stock < 5 ? 'text-red-500' : 'text-amber-400'}">${p.stock}</span>
-              <p class="text-[9px] text-gray-500 uppercase">Stock</p>
+        </div>
+    </main>
+
+    <div id="modal-product" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-vylon-card border border-vylon-border rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-4">
+            <div class="flex justify-between items-center border-b border-vylon-border pb-3">
+                <h3 id="modal-title" class="text-lg font-bold text-white">Nuevo Producto</h3>
+                <button onclick="closeProductModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
             </div>
-            <button onclick="openRestockModal('${p.id}', '${p.name}')" class="bg-vylon-gold/10 text-vylon-gold border border-vylon-gold/30 px-3 py-1.5 rounded-lg text-xs font-bold">
-              Reabastecer
-            </button>
-            <button onclick="deleteProduct('${p.id}')" class="text-red-400 hover:text-red-300 px-2 py-1">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-          </div>
-        `;
-        container.appendChild(item);
-      });
-    }
 
-    function renderAdminHistory() {
-      const history = JSON.parse(localStorage.getItem('vylon_db_history') || '[]');
-      const container = document.getElementById('history-container');
-      container.innerHTML = '';
+            <form id="product-form" onsubmit="saveProduct(event)" class="space-y-4">
+                <input type="hidden" id="field-id">
+                
+                <div>
+                    <label class="block text-xs uppercase text-zinc-400 mb-1 font-semibold">Código / SKU</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="field-code" required class="flex-grow bg-vylon-bg border border-vylon-border rounded-lg p-2.5 text-white focus:border-blood-500">
+                        <button type="button" onclick="startScanner('admin')" class="bg-blood-900 hover:bg-blood-800 text-blood-500 border border-blood-800 px-3 rounded-lg">
+                            <i class="fa-solid fa-barcode"></i>
+                        </button>
+                    </div>
+                </div>
 
-      let totalSales = 0;
+                <div id="admin-scanner-container" class="hidden bg-vylon-bg p-2 rounded-lg border border-blood-700">
+                    <div id="admin-interactive" class="viewport w-full h-36 bg-black rounded"></div>
+                </div>
 
-      if (history.length === 0) {
-        container.innerHTML = `<div class="text-center py-6 text-gray-500 text-xs">No hay ventas registradas en el historial.</div>`;
-        return;
-      }
+                <div>
+                    <label class="block text-xs uppercase text-zinc-400 mb-1 font-semibold">Nombre del Producto</label>
+                    <input type="text" id="field-name" required class="w-full bg-vylon-bg border border-vylon-border rounded-lg p-2.5 text-white focus:border-blood-500">
+                </div>
 
-      history.forEach(h => {
-        totalSales += h.totalUSD;
-        const item = document.createElement('div');
-        item.className = "bg-vylon-cardBg p-3 rounded-xl border border-vylon-border flex justify-between items-center text-xs";
-        item.innerHTML = `
-          <div>
-            <p class="font-bold text-vylon-gold">${h.product}</p>
-            <p class="text-[10px] text-gray-400">${h.qty} ud · TX: ${h.txId} | ${h.date}</p>
-          </div>
-          <div class="text-right">
-            <span class="font-black text-white text-sm">$${h.totalUSD.toFixed(2)} USDT</span>
-          </div>
-        `;
-        container.appendChild(item);
-      });
+                <div class="grid grid-cols-2 gap-4 bg-vylon-bg p-3 rounded-lg border border-vylon-border">
+                    <div>
+                        <label class="block text-xs text-blood-500 mb-1 font-bold">Precio (USDT / $)</label>
+                        <input type="number" step="0.01" id="field-price-usd" oninput="calcPriceFromUSD()" required class="w-full bg-vylon-card border border-vylon-border rounded-lg p-2 text-white focus:border-blood-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-zinc-400 mb-1 font-bold">Precio Equiv. (Bs.)</label>
+                        <input type="number" step="0.01" id="field-price-bs" oninput="calcPriceFromBS()" required class="w-full bg-vylon-card border border-vylon-border rounded-lg p-2 text-white focus:border-blood-500">
+                    </div>
+                </div>
 
-      document.getElementById('historial-total-val').textContent = '$' + totalSales.toFixed(2) + ' USDT';
-    }
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs uppercase text-zinc-400 mb-1 font-semibold">Stock Disponible</label>
+                        <input type="number" id="field-stock" required class="w-full bg-vylon-bg border border-vylon-border rounded-lg p-2.5 text-white focus:border-blood-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase text-zinc-400 mb-1 font-semibold">Unidades Dañadas</label>
+                        <input type="number" id="field-damaged" required class="w-full bg-vylon-bg border border-vylon-border rounded-lg p-2.5 text-white focus:border-blood-500">
+                    </div>
+                </div>
 
-    // CREACIÓN Y EDICIÓN DE PRODUCTOS NUEVOS
-    function openNewProductModal() {
-      tempPhotoBase64 = null;
-      document.getElementById('photo-preview-container').classList.remove('hidden');
-      document.getElementById('photo-preview-img').classList.add('hidden');
-      document.getElementById('modal-new-product').classList.remove('hidden');
-    }
+                <div>
+                    <label class="block text-xs uppercase text-zinc-400 mb-1 font-semibold">URL de la Imagen</label>
+                    <input type="url" id="field-image" placeholder="https://..." class="w-full bg-vylon-bg border border-vylon-border rounded-lg p-2.5 text-white focus:border-blood-500">
+                </div>
 
-    function closeNewProductModal() {
-      document.getElementById('modal-new-product').classList.add('hidden');
-    }
+                <div class="pt-2 flex gap-3">
+                    <button type="button" onclick="closeProductModal()" class="w-1/2 bg-vylon-bg hover:bg-zinc-800 text-white py-2.5 rounded-lg border border-vylon-border">Cancelar</button>
+                    <button type="submit" class="w-1/2 bg-blood-800 hover:bg-blood-700 text-white font-semibold py-2.5 rounded-lg border border-blood-600 transition glow-blood">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    function previewPhoto(event) {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          tempPhotoBase64 = e.target.result;
-          const img = document.getElementById('photo-preview-img');
-          img.src = tempPhotoBase64;
-          img.classList.remove('hidden');
-          document.getElementById('photo-preview-container').classList.add('hidden');
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-
-    function handleSaveProduct(e) {
-      e.preventDefault();
-      const products = JSON.parse(localStorage.getItem('vylon_db_products') || '[]');
-
-      const newProd = {
-        id: 'p_' + Date.now(),
-        name: document.getElementById('prod-name').value.trim(),
-        desc: document.getElementById('prod-desc').value.trim(),
-        price: parseFloat(document.getElementById('prod-price').value),
-        stock: parseInt(document.getElementById('prod-stock').value),
-        code: document.getElementById('prod-code').value.trim(),
-        image: tempPhotoBase64 || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
-      };
-
-      products.unshift(newProd);
-      localStorage.setItem('vylon_db_products', JSON.stringify(products));
-
-      // Verificar si se crea con stock bajo de una vez
-      checkAndNotifyLowStock(newProd);
-
-      closeNewProductModal();
-      renderAdminDashboard();
-      renderPublicStore();
-      alert('Producto guardado correctamente');
-    }
-
-    function deleteProduct(id) {
-      if (confirm('¿Deseas eliminar este producto del inventario?')) {
-        let products = JSON.parse(localStorage.getItem('vylon_db_products') || '[]');
-        products = products.filter(p => p.id !== id);
-        localStorage.setItem('vylon_db_products', JSON.stringify(products));
-        renderAdminDashboard();
-        renderPublicStore();
-      }
-    }
-
-    // MODAL Y ACCIÓN DE REABASTECIMIENTO
-    function openRestockModal(id, title) {
-      document.getElementById('restock-prod-id').value = id;
-      document.getElementById('restock-prod-title').textContent = title;
-      document.getElementById('modal-restock').classList.remove('hidden');
-    }
-
-    function closeRestockModal() {
-      document.getElementById('modal-restock').classList.add('hidden');
-    }
-
-    function handleConfirmRestock(e) {
-      e.preventDefault();
-      const id = document.getElementById('restock-prod-id').value;
-      const addAmount = parseInt(document.getElementById('restock-amount').value);
-
-      const products = JSON.parse(localStorage.getItem('vylon_db_products') || '[]');
-      const prod = products.find(p => p.id === id);
-
-      if (prod) {
-        prod.stock += addAmount;
-        localStorage.setItem('vylon_db_products', JSON.stringify(products));
-        closeRestockModal();
-        renderAdminDashboard();
-        renderPublicStore();
-        alert('Stock reabastecido con éxito');
-      }
-    }
-
-    function exportJSON() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(localStorage.getItem('vylon_db_products'));
-      const dlAnchor = document.createElement('a');
-      dlAnchor.setAttribute("href", dataStr);
-      dlAnchor.setAttribute("download", "inventario_vylon.json");
-      dlAnchor.click();
-    }
-
-    // GRÁFICO CHART.JS DE STOCK EN ADMIN
-    function renderAdminCharts() {
-      const products = JSON.parse(localStorage.getItem('vylon_db_products') || '[]');
-      const ctx = document.getElementById('chartStockOverview')?.getContext('2d');
-
-      if (ctx) {
-        if (chartStockInstance) chartStockInstance.destroy();
-        chartStockInstance = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: products.map(p => p.name.substring(0, 12) + '...'),
-            datasets: [{
-              label: 'Stock Existente',
-              data: products.map(p => p.stock),
-              backgroundColor: products.map(p => p.stock < 5 ? '#EF4444' : '#D4AF37')
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              x: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#222' } },
-              y: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#222' } }
-            },
-            plugins: { legend: { display: false } }
-          }
-        });
-      }
-    }
-
-    // INICIALIZAR LA TIENDA PÚBLICA AL CARGAR
-    renderPublicStore();
-  </script>
+    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
