@@ -6,62 +6,72 @@
     <title>Panel de Afiliados - Vylon</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 font-sans p-6">
-    <div class="max-w-4xl mx-auto">
+<body class="bg-gray-100 font-sans p-4 md:p-6 min-h-screen">
+    <div class="max-w-6xl mx-auto space-y-6">
+        <!-- Navegación Superior -->
+        <div class="flex justify-between items-center bg-slate-900 text-white p-4 rounded-xl shadow-md">
+            <h1 class="text-xl font-bold">Programa de Afiliados Vylon</h1>
+            <a href="index.html" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-lg border border-slate-700">Volver a la Tienda</a>
+        </div>
+
         <!-- Registro / Login -->
-        <div id="affiliate-auth" class="bg-white p-6 rounded-lg shadow-md mb-6">
-            <h2 class="text-2xl font-bold mb-4">Registro de Afiliado</h2>
+        <div id="affiliate-auth" class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+            <h2 class="text-2xl font-bold mb-2 text-gray-800">Acceso / Registro de Afiliado</h2>
+            <p class="text-xs text-gray-500 mb-6">Ingresa tus datos para generar enlaces de comisión y cobrar mediante Pago Móvil.</p>
+
             <form id="affiliate-register-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium">Alias (Único)</label>
-                    <input type="text" id="aff-alias" placeholder="ej: pedro2026" required class="w-full border p-2 rounded mt-1">
+                    <label class="block text-xs font-bold uppercase text-gray-600">Alias (Único, sin espacios)</label>
+                    <input type="text" id="aff-alias" placeholder="ej: william" required class="w-full border p-2.5 rounded-lg mt-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium">Banco (Código 4 dígitos)</label>
-                    <input type="text" id="aff-bank" placeholder="0102" maxlength="4" required class="w-full border p-2 rounded mt-1">
+                    <label class="block text-xs font-bold uppercase text-gray-600">Banco (Código 4 dígitos)</label>
+                    <input type="text" id="aff-bank" placeholder="0102" maxlength="4" required class="w-full border p-2.5 rounded-lg mt-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium">Teléfono Pago Móvil</label>
-                    <input type="text" id="aff-phone" placeholder="04125866685" required class="w-full border p-2 rounded mt-1">
+                    <label class="block text-xs font-bold uppercase text-gray-600">Teléfono Pago Móvil</label>
+                    <input type="text" id="aff-phone" placeholder="04125866685" required class="w-full border p-2.5 rounded-lg mt-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium">Cédula de Identidad</label>
-                    <input type="text" id="aff-ci" placeholder="25641163" required class="w-full border p-2 rounded mt-1">
+                    <label class="block text-xs font-bold uppercase text-gray-600">Cédula de Identidad</label>
+                    <input type="text" id="aff-ci" placeholder="25641163" required class="w-full border p-2.5 rounded-lg mt-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </div>
-                <button type="submit" class="md:col-span-2 bg-blue-600 text-white font-bold py-2 rounded">Ingresar al Panel</button>
+                <button type="submit" class="md:col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow transition">Entrar al Panel Estadístico</button>
             </form>
         </div>
 
-        <!-- Panel del Afiliado -->
+        <!-- Dashboard del Afiliado -->
         <div id="affiliate-dashboard" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-lg shadow-md flex justify-between items-center">
+            <div class="bg-white p-6 rounded-xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 class="text-2xl font-bold" id="dash-alias">Bienvenido</h2>
-                    <p class="text-sm text-gray-500" id="dash-details"></p>
+                    <h2 class="text-2xl font-bold text-gray-800" id="dash-alias">Bienvenido</h2>
+                    <p class="text-xs text-gray-500 mt-1" id="dash-details"></p>
                 </div>
-                <button onclick="logoutAffiliate()" class="text-red-500 text-sm underline">Cerrar Sesión</button>
+                <button onclick="logoutAffiliate()" class="text-xs bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg font-bold hover:bg-red-100">Cerrar Sesión</button>
             </div>
 
-            <!-- Métricas -->
+            <!-- Métricas Estadísticas -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-                    <p class="text-sm text-gray-500">Visitas generadas</p>
-                    <p class="text-2xl font-bold" id="metric-clicks">0</p>
+                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
+                    <p class="text-xs text-gray-500 font-bold uppercase">Visitas Generadas</p>
+                    <p class="text-3xl font-black text-gray-800 mt-1" id="metric-clicks">0</p>
                 </div>
-                <div class="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500">
-                    <p class="text-sm text-gray-500">Comisiones Pendientes</p>
-                    <p class="text-xl font-bold" id="metric-pending">$0.00 / 0.00 BS</p>
+                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500">
+                    <p class="text-xs text-gray-500 font-bold uppercase">Comisiones por Verificar</p>
+                    <p class="text-xl font-black text-yellow-600 mt-1" id="metric-pending">$0.00 USDT</p>
+                    <p class="text-xs text-gray-400" id="metric-pending-bs">Bs. 0,00</p>
                 </div>
-                <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
-                    <p class="text-sm text-gray-500">Comisiones Verificadas</p>
-                    <p class="text-xl font-bold text-green-600" id="metric-approved">$0.00 / 0.00 BS</p>
+                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500">
+                    <p class="text-xs text-gray-500 font-bold uppercase">Comisiones Verificadas / Cobradas</p>
+                    <p class="text-xl font-black text-green-600 mt-1" id="metric-approved">$0.00 USDT</p>
+                    <p class="text-xs text-gray-400" id="metric-approved-bs">Bs. 0,00</p>
                 </div>
             </div>
 
-            <!-- Links de Productos -->
-            <div class="bg-white p-6 rounded-lg shadow-md">
-                <h3 class="text-xl font-bold mb-4">Generador de Enlaces de Productos</h3>
-                <div id="affiliate-products" class="space-y-4"></div>
+            <!-- Inventario y Generador de Enlaces -->
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Stock de Productos y Enlaces de Afiliado</h3>
+                <div id="affiliate-products" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
         </div>
     </div>
