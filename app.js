@@ -79,6 +79,8 @@ function handleAdminLogin(event) {
     event.preventDefault();
     const pin = document.getElementById('admin-pin-input').value;
     if (pin === ADMIN_PIN) {
+        // Guardamos la marca de autorización
+        sessionStorage.setItem('vylon_admin_auth', 'true');
         closeAdminAuthModal();
         window.location.href = 'admin.html';
     } else {
