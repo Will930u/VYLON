@@ -5,77 +5,136 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Afiliados - Vylon</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-100 font-sans p-4 md:p-6 min-h-screen">
     <div class="max-w-6xl mx-auto space-y-6">
-        <!-- Navegación Superior -->
         <div class="flex justify-between items-center bg-slate-900 text-white p-4 rounded-xl shadow-md">
             <h1 class="text-xl font-bold">Programa de Afiliados Vylon</h1>
-            <a href="index.html" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-lg border border-slate-700">Volver a la Tienda</a>
+            <a href="index.html" class="text-xs bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-700 transition">
+                Volver a la Tienda
+            </a>
         </div>
 
-        <!-- Registro / Login -->
-        <div id="affiliate-auth" class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-            <h2 class="text-2xl font-bold mb-2 text-gray-800">Acceso / Registro de Afiliado</h2>
-            <p class="text-xs text-gray-500 mb-6">Ingresa tus datos para generar enlaces de comisión y cobrar mediante Pago Móvil.</p>
+        <div id="affiliate-auth" class="bg-white p-6 rounded-xl shadow-md border border-gray-200 max-w-md mx-auto space-y-4">
+            <h2 class="text-xl font-bold text-gray-800 text-center">Acceso de Afiliado</h2>
+            
+            <div class="flex border-b border-gray-200 text-xs font-bold text-center">
+                <button onclick="toggleAffAuthMode('login')" id="btn-mode-login" class="w-1/2 py-2 border-b-2 border-slate-900 text-slate-900">Iniciar Sesión</button>
+                <button onclick="toggleAffAuthMode('register')" id="btn-mode-register" class="w-1/2 py-2 border-b-2 border-transparent text-gray-400">Registrarse</button>
+            </div>
 
-            <form id="affiliate-register-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form id="form-aff-login" onsubmit="handleAffiliateLogin(event)" class="space-y-3">
                 <div>
-                    <label class="block text-xs font-bold uppercase text-gray-600">Alias (Único, sin espacios)</label>
-                    <input type="text" id="aff-alias" placeholder="ej: william" required class="w-full border p-2.5 rounded-lg mt-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Alias (Usuario)</label>
+                    <input type="text" id="aff-login-alias" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase text-gray-600">Banco (Código 4 dígitos)</label>
-                    <input type="text" id="aff-bank" placeholder="0102" maxlength="4" required class="w-full border p-2.5 rounded-lg mt-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Contraseña</label>
+                    <input type="password" id="aff-login-pass" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
+                </div>
+                <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 rounded-lg text-xs transition">
+                    Entrar al Panel
+                </button>
+            </form>
+
+            <form id="form-aff-reg" onsubmit="handleAffiliateRegister(event)" class="space-y-3 hidden">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Alias Único</label>
+                    <input type="text" id="aff-reg-alias" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase text-gray-600">Teléfono Pago Móvil</label>
-                    <input type="text" id="aff-phone" placeholder="04125866685" required class="w-full border p-2.5 rounded-lg mt-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Contraseña</label>
+                    <input type="password" id="aff-reg-pass" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Banco</label>
+                        <input type="text" id="aff-reg-bank" placeholder="0102" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Cédula</label>
+                        <input type="text" id="aff-reg-ci" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
+                    </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase text-gray-600">Cédula de Identidad</label>
-                    <input type="text" id="aff-ci" placeholder="25641163" required class="w-full border p-2.5 rounded-lg mt-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Teléfono Pago Móvil</label>
+                    <input type="text" id="aff-reg-phone" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
                 </div>
-                <button type="submit" class="md:col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow transition">Entrar al Panel Estadístico</button>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg text-xs transition">
+                    Crear Cuenta e Ingresar
+                </button>
             </form>
         </div>
 
-        <!-- Dashboard del Afiliado -->
         <div id="affiliate-dashboard" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800" id="dash-alias">Bienvenido</h2>
-                    <p class="text-xs text-gray-500 mt-1" id="dash-details"></p>
+                    <p class="text-xs text-gray-500 font-bold uppercase">Sesión Activa</p>
+                    <h2 class="text-xl font-black text-gray-800">Bienvenido, <span id="dash-alias-name" class="text-blue-600"></span></h2>
                 </div>
-                <button onclick="logoutAffiliate()" class="text-xs bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg font-bold hover:bg-red-100">Cerrar Sesión</button>
+                <button onclick="logoutAffiliate()" class="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 text-xs font-bold px-3 py-1.5 rounded-lg transition">
+                    Cerrar Sesión
+                </button>
             </div>
 
-            <!-- Métricas Estadísticas -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
-                    <p class="text-xs text-gray-500 font-bold uppercase">Visitas Generadas</p>
-                    <p class="text-3xl font-black text-gray-800 mt-1" id="metric-clicks">0</p>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500">
-                    <p class="text-xs text-gray-500 font-bold uppercase">Comisiones por Verificar</p>
-                    <p class="text-xl font-black text-yellow-600 mt-1" id="metric-pending">$0.00 USDT</p>
-                    <p class="text-xs text-gray-400" id="metric-pending-bs">Bs. 0,00</p>
+                    <p class="text-xs text-gray-500 font-bold uppercase">Ventas Generadas</p>
+                    <p class="text-3xl font-black text-gray-800 mt-1" id="metric-sales">0</p>
                 </div>
                 <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500">
-                    <p class="text-xs text-gray-500 font-bold uppercase">Comisiones Verificadas / Cobradas</p>
-                    <p class="text-xl font-black text-green-600 mt-1" id="metric-approved">$0.00 USDT</p>
-                    <p class="text-xs text-gray-400" id="metric-approved-bs">Bs. 0,00</p>
+                    <p class="text-xs text-gray-500 font-bold uppercase">Comisiones Acumuladas</p>
+                    <p class="text-2xl font-black text-green-600 mt-1" id="metric-commission">$0.00 USDT</p>
+                    <p class="text-xs text-gray-400" id="metric-commission-bs">Bs. 0,00</p>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-700 text-xs text-gray-600 space-y-1">
+                    <p class="text-xs text-gray-500 font-bold uppercase mb-2">Datos de Cobro</p>
+                    <p><strong>Banco:</strong> <span id="dash-info-bank"></span></p>
+                    <p><strong>Teléfono:</strong> <span id="dash-info-phone"></span></p>
+                    <p><strong>Cédula:</strong> <span id="dash-info-ci"></span></p>
                 </div>
             </div>
 
-            <!-- Inventario y Generador de Enlaces -->
-            <div class="bg-white p-6 rounded-xl shadow-md">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">Stock de Productos y Enlaces de Afiliado</h3>
-                <div id="affiliate-products" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
+                <h3 class="text-base font-bold text-gray-800">Tus Enlaces de Afiliado por Producto</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-gray-600">
+                        <thead class="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200">
+                            <tr>
+                                <th class="p-3">Producto</th>
+                                <th class="p-3">Precio</th>
+                                <th class="p-3">Tu Comisión</th>
+                                <th class="p-3 text-right">Enlace Promocional</th>
+                            </tr>
+                        </thead>
+                        <tbody id="affiliate-links-table-body" class="divide-y divide-gray-100">
+                            </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAffiliateSession();
+        });
+
+        function toggleAffAuthMode(mode) {
+            if(mode === 'login') {
+                document.getElementById('form-aff-login').classList.remove('hidden');
+                document.getElementById('form-aff-reg').classList.add('hidden');
+                document.getElementById('btn-mode-login').className = "w-1/2 py-2 border-b-2 border-slate-900 text-slate-900 font-bold";
+                document.getElementById('btn-mode-register').className = "w-1/2 py-2 border-b-2 border-transparent text-gray-400 font-bold";
+            } else {
+                document.getElementById('form-aff-login').classList.add('hidden');
+                document.getElementById('form-aff-reg').classList.remove('hidden');
+                document.getElementById('btn-mode-login').className = "w-1/2 py-2 border-b-2 border-transparent text-gray-400 font-bold";
+                document.getElementById('btn-mode-register').className = "w-1/2 py-2 border-b-2 border-slate-900 text-slate-900 font-bold";
+            }
+        }
+    </script>
 </body>
 </html>
