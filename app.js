@@ -2,6 +2,15 @@
 const DEFAULT_EXCHANGE_RATE = 78.50;
 const ADMIN_PIN = "1234"; // Clave restringida para el panel de administración
 
+// Claves de integración EmailJS / Gmail (Reemplaza por tus credenciales de EmailJS)
+const EMAILJS_PUBLIC_KEY = "TU_PUBLIC_KEY";
+const EMAILJS_SERVICE_ID = "TU_SERVICE_ID";
+const EMAILJS_TEMPLATE_ID = "TU_TEMPLATE_ID";
+
+if (window.emailjs && EMAILJS_PUBLIC_KEY !== "TU_PUBLIC_KEY") {
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+}
+
 const INITIAL_PRODUCTS = [
     { id: 1, name: "Bicarbonato de Sodio BicarBix 150g", code: "7599063000063", priceUSDT: 2.00, stock: 98, damaged: 0, sales: 6, commissionUSDT: 0.50 },
     { id: 2, name: "Vick VapoRub 12 g", code: "7599063000064", priceUSDT: 1.50, stock: 150, damaged: 0, sales: 2, commissionUSDT: 0.30 },
@@ -79,7 +88,6 @@ function handleAdminLogin(event) {
     event.preventDefault();
     const pin = document.getElementById('admin-pin-input').value;
     if (pin === ADMIN_PIN) {
-        // Guardamos la marca de autorización
         sessionStorage.setItem('vylon_admin_auth', 'true');
         closeAdminAuthModal();
         window.location.href = 'admin.html';
@@ -97,11 +105,9 @@ function renderPublicStore() {
     const config = getConfig();
     const query = (document.getElementById('public-search')?.value || '').toLowerCase();
 
-    // Slogan dinámico
     const sloganEl = document.getElementById('store-slogan');
     if (sloganEl) sloganEl.innerText = config.slogan;
 
-    // Detectar si la URL trae un parámetro de afiliado (?ref=alias)
     const urlParams = new URLSearchParams(window.location.search);
     const refAlias = urlParams.get('ref') || '';
 
@@ -198,12 +204,10 @@ function submitCustomerOrder(event) {
         return;
     }
 
-    // Descontar Stock
     products[productIndex].stock -= qty;
     products[productIndex].sales = (products[productIndex].sales || 0) + qty;
     localStorage.setItem('vylon_db_products', JSON.stringify(products));
 
-    // Registrar Pedido
     const orders = getOrders();
     const newOrder = {
         id: "ORD-" + Math.floor(100 + Math.random() * 900),
@@ -222,7 +226,6 @@ function submitCustomerOrder(event) {
     closeBuyModal();
     renderPublicStore();
 
-    // Redirigir a Confirmación por WhatsApp
     const config = getConfig();
     const totalBs = (newOrder.priceUSDT * config.exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2 });
     const message = `Hola VYLON, acabo de realizar un pedido:\n\n*Pedido:* ${newOrder.id}\n*Producto:* ${product.name} (x${qty})\n*Cliente:* ${clientName}\n*Total:* ${newOrder.priceUSDT.toFixed(2)} USDT (Bs. ${totalBs})\n\nAdjunto comprobante de Pago Móvil.`;
@@ -230,112 +233,219 @@ function submitCustomerOrder(event) {
     window.open(`https://wa.me/584129830982?text=${encodeURIComponent(message)}`, '_blank');
 }
 
-// --- MÓDULO AFILIADOS (`afiliado.html`) ---
+// --- MÓDULO AFILIADOS Y RECUPERACIÓN POR GMAIL (`afiliado.html`) ---
+function openForgotPasswordModal() {
+    const modal = document.getElementById('modal-forgot-password');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+function closeForgotPasswordModal() {
+    const modal = document.getElementById('modal-forgot-password');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+/**
+ * Envía el token de recuperación por correo usando EmailJS / Gmail
+ */
+function handleSendEmailReset(event) {
+    event.preventDefault();
+    const emailOrAlias = document.getElementById('reset-email-input').value.trim();
+    
+    if (!emailOrAlias) {
+        alert("Por favor, ingresa tu correo electrónico o alias registrado.");
+        return;
+    }
+
+    const affiliates = getAffiliates();
+    const user = affiliates.find(a => 
+        (a.email && a.email.toLowerCase() === emailOrAlias.toLowerCase()) || 
+        (a.alias && a.alias.toLowerCase() === emailOrAlias.toLowerCase())
+    );
+
+    if (!user) {
+        alert("No se encontró ningún usuario asociado a esa información.");
+        return;
+    }
+
+    const recipientEmail = user.email || emailOrAlias;
+    const otpToken = 'VY-' + Math.floor(100000 + Math.random() * 900000);
+    
+    const resetRequests = JSON.parse(localStorage.getItem('vylon_reset_tokens') || '{}');
+    resetRequests[recipientEmail] = {
+        token: otpToken,
+        timestamp: Date.now()
+    };
+    localStorage.setItem('vylon_reset_tokens', JSON.stringify(resetRequests));
+
+    if (EMAILJS_PUBLIC_KEY === "TU_PUBLIC_KEY") {
+        alert(`[DEMO RECUPERACIÓN]\n\nToken generado para ${user.alias}: ${otpToken}\n\n(Configura tus claves de EmailJS en app.js para recibirlo en tu Gmail real).`);
+        closeForgotPasswordModal();
+        return;
+    }
+
+    const templateParams = {
+        to_email: recipientEmail,
+        to_name: user.alias,
+        otp_token: otpToken
+    };
+
+    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+        .then(() => {
+            alert(`Hemos enviado un código de recuperación a ${recipientEmail}. Revisa tu correo.`);
+            closeForgotPasswordModal();
+        })
+        .catch((error) => {
+            console.error("Error EmailJS:", error);
+            alert("Hubo un error al enviar el correo de recuperación. Inténtalo de nuevo.");
+        });
+}
+
 function checkAffiliateSession() {
-    const session = JSON.parse(sessionStorage.getItem('vylon_active_affiliate') || 'null');
+    const activeUser = JSON.parse(localStorage.getItem('vylon_active_affiliate') || 'null');
     const authBox = document.getElementById('affiliate-auth');
     const dashBox = document.getElementById('affiliate-dashboard');
 
-    if (session && dashBox && authBox) {
+    if (activeUser && dashBox && authBox) {
         authBox.classList.add('hidden');
         dashBox.classList.remove('hidden');
-        renderAffiliateDashboard(session);
+        renderAffiliateDashboard(activeUser);
+    } else {
+        if (authBox) authBox.classList.remove('hidden');
+        if (dashBox) dashBox.classList.add('hidden');
     }
 }
 
 function handleAffiliateLogin(event) {
     event.preventDefault();
-    const alias = (document.getElementById('aff-login-alias')?.value || document.getElementById('login-alias')?.value || '').trim();
-    const pass = document.getElementById('aff-login-pass')?.value || document.getElementById('login-password')?.value;
+    const aliasOrEmail = (document.getElementById('aff-login-alias')?.value || '').trim().toLowerCase();
+    const pass = document.getElementById('aff-login-pass')?.value;
 
     const affiliates = getAffiliates();
-    const found = affiliates.find(a => a.alias.toLowerCase() === alias.toLowerCase() && a.password === pass);
+    const user = affiliates.find(a => 
+        (a.alias.toLowerCase() === aliasOrEmail || (a.email && a.email.toLowerCase() === aliasOrEmail)) && 
+        a.password === pass
+    );
 
-    if (found) {
-        sessionStorage.setItem('vylon_active_affiliate', JSON.stringify(found));
+    if (user) {
+        localStorage.setItem('vylon_active_affiliate', JSON.stringify(user));
         checkAffiliateSession();
     } else {
-        alert("Credenciales de afiliado incorrectas.");
+        alert("Credenciales incorrectas. Verifica tu alias/correo y contraseña.");
     }
 }
 
 function handleAffiliateRegister(event) {
     event.preventDefault();
-    const alias = (document.getElementById('aff-reg-alias')?.value || document.getElementById('reg-alias')?.value || '').trim();
-    const pass = document.getElementById('aff-reg-pass')?.value || document.getElementById('reg-password')?.value;
-    const bank = document.getElementById('aff-reg-bank')?.value || document.getElementById('reg-bank')?.value;
-    const ci = document.getElementById('aff-reg-ci')?.value || document.getElementById('reg-cedula')?.value;
-    const phone = document.getElementById('aff-reg-phone')?.value || document.getElementById('reg-phone')?.value;
+    const alias = (document.getElementById('aff-reg-alias')?.value || '').trim();
+    const email = (document.getElementById('aff-reg-email')?.value || '').trim();
+    const pass = document.getElementById('aff-reg-pass')?.value;
+    const bank = document.getElementById('aff-reg-bank')?.value;
+    const ci = document.getElementById('aff-reg-ci')?.value;
+    const phone = document.getElementById('aff-reg-phone')?.value;
 
-    const affiliates = getAffiliates();
+    let affiliates = getAffiliates();
     if (affiliates.some(a => a.alias.toLowerCase() === alias.toLowerCase())) {
         alert("Ese alias ya está registrado. Por favor elige otro.");
         return;
     }
 
-    const newAffiliate = { alias, password: pass, bank, ci, phone };
+    const newAffiliate = {
+        id: 'AFF-' + Date.now(),
+        alias: alias,
+        email: email,
+        password: pass,
+        bank: bank,
+        ci: ci,
+        phone: phone,
+        createdAt: new Date().toISOString()
+    };
+
     affiliates.push(newAffiliate);
     localStorage.setItem('vylon_db_affiliates', JSON.stringify(affiliates));
-
-    sessionStorage.setItem('vylon_active_affiliate', JSON.stringify(newAffiliate));
+    localStorage.setItem('vylon_active_affiliate', JSON.stringify(newAffiliate));
+    
+    alert("¡Registro exitoso! Bienvenido al panel de afiliados.");
     checkAffiliateSession();
 }
 
 function logoutAffiliate() {
-    sessionStorage.removeItem('vylon_active_affiliate');
-    window.location.reload();
+    localStorage.removeItem('vylon_active_affiliate');
+    checkAffiliateSession();
 }
 
-function renderAffiliateDashboard(affiliate) {
+function renderAffiliateDashboard(user) {
     const aliasEl = document.getElementById('dash-alias-name');
-    if (aliasEl) aliasEl.innerText = affiliate.alias;
+    if (aliasEl) aliasEl.innerText = user.alias;
 
-    document.getElementById('dash-info-bank').innerText = affiliate.bank;
-    document.getElementById('dash-info-phone').innerText = affiliate.phone;
-    document.getElementById('dash-info-ci').innerText = affiliate.ci;
+    if (document.getElementById('dash-info-bank')) document.getElementById('dash-info-bank').innerText = user.bank || 'No especificado';
+    if (document.getElementById('dash-info-phone')) document.getElementById('dash-info-phone').innerText = user.phone || 'No especificado';
+    if (document.getElementById('dash-info-ci')) document.getElementById('dash-info-ci').innerText = user.ci || 'No especificado';
 
     const orders = getOrders();
     const products = getProducts();
     const config = getConfig();
 
-    // Obtener pedidos del afiliado
-    const affOrders = orders.filter(o => o.affiliateAlias.toLowerCase() === affiliate.alias.toLowerCase());
+    const affOrders = orders.filter(o => o.affiliateAlias && o.affiliateAlias.toLowerCase() === user.alias.toLowerCase());
     
     let totalCommUSD = 0;
     affOrders.forEach(o => {
         const prod = products.find(p => p.id === o.productId);
         if (prod) {
-            totalCommUSD += (prod.commissionUSDT * o.qty);
+            totalCommUSD += ((prod.commissionUSDT || (prod.priceUSDT * 0.10)) * o.qty);
         }
     });
 
-    document.getElementById('metric-sales').innerText = affOrders.length;
-    document.getElementById('metric-commission').innerText = `$${totalCommUSD.toFixed(2)} USDT`;
+    if (document.getElementById('metric-sales')) document.getElementById('metric-sales').innerText = affOrders.length;
+    if (document.getElementById('metric-commission')) document.getElementById('metric-commission').innerText = `$${totalCommUSD.toFixed(2)} USDT`;
     
     const totalBs = totalCommUSD * config.exchangeRate;
-    document.getElementById('metric-commission-bs').innerText = `Bs. ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
+    if (document.getElementById('metric-commission-bs')) {
+        document.getElementById('metric-commission-bs').innerText = `Bs. ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
+    }
 
-    // Tabla de Enlaces
     const tableBody = document.getElementById('affiliate-links-table-body');
     if (tableBody) {
         tableBody.innerHTML = '';
+        if (products.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">No hay productos disponibles para promocionar.</td></tr>`;
+            return;
+        }
+
+        const baseUrl = window.location.origin + window.location.pathname.replace('afiliado.html', 'index.html');
+
         products.forEach(p => {
-            const link = `${window.location.origin}${window.location.pathname.replace('afiliado.html', 'index.html')}?ref=${encodeURIComponent(affiliate.alias)}`;
+            const link = `${baseUrl}?ref=${encodeURIComponent(user.alias)}&prod=${p.id}`;
+            const comm = p.commissionUSDT || (p.priceUSDT * 0.10);
+
             const tr = document.createElement('tr');
-            tr.className = "hover:bg-gray-50";
+            tr.className = "hover:bg-gray-50 transition";
             tr.innerHTML = `
                 <td class="p-3 font-bold text-gray-800">${p.name}</td>
                 <td class="p-3">$${p.priceUSDT.toFixed(2)}</td>
-                <td class="p-3 text-green-600 font-bold">$${p.commissionUSDT.toFixed(2)}</td>
+                <td class="p-3 text-green-600 font-bold">$${comm.toFixed(2)}</td>
                 <td class="p-3 text-right">
-                    <button onclick="navigator.clipboard.writeText('${link}'); alert('Enlace copiado al portapapeles');" class="bg-slate-900 text-white px-2.5 py-1 rounded text-[11px] font-bold">
-                        Copiar Enlace
+                    <button onclick="copyToClipboard('${link}')" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1 rounded text-xs font-bold inline-flex items-center gap-1 transition">
+                        <i class="fa-regular fa-copy"></i> Copiar Enlace
                     </button>
                 </td>
             `;
             tableBody.appendChild(tr);
         });
     }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert("Enlace de afiliado copiado al portapapeles");
+    }).catch(err => {
+        console.error("Error al copiar enlace: ", err);
+    });
 }
 
 // --- MÓDULO PANEL ADMIN (`admin.html`) ---
@@ -357,7 +467,6 @@ function renderAdminDashboard() {
     const orders = getOrders();
     const config = getConfig();
 
-    // Métricas
     document.getElementById('stat-total-products').innerText = products.length;
     const totalStock = products.reduce((acc, p) => acc + p.stock, 0);
     document.getElementById('stat-total-stock').innerText = totalStock;
@@ -366,7 +475,6 @@ function renderAdminDashboard() {
     const totalRev = orders.reduce((acc, o) => acc + o.priceUSDT, 0);
     document.getElementById('stat-total-revenue').innerText = `$${totalRev.toFixed(2)} USDT`;
 
-    // Gráfico de Stock
     const ctx = document.getElementById('chartStockOverview')?.getContext('2d');
     if (ctx) {
         if (chartInstance) chartInstance.destroy();
@@ -391,7 +499,6 @@ function renderAdminDashboard() {
         });
     }
 
-    // Tabla Productos Admin
     const prodTable = document.getElementById('admin-products-table-body');
     if (prodTable) {
         prodTable.innerHTML = '';
@@ -413,7 +520,6 @@ function renderAdminDashboard() {
         });
     }
 
-    // Tabla Pedidos Admin
     const orderTable = document.getElementById('admin-orders-table-body');
     if (orderTable) {
         orderTable.innerHTML = '';
@@ -432,7 +538,6 @@ function renderAdminDashboard() {
         });
     }
 
-    // Cargar Configuración
     document.getElementById('cfg-slogan').value = config.slogan;
     document.getElementById('cfg-exchange-rate').value = config.exchangeRate;
     document.getElementById('cfg-pm-bank').value = config.pmBank;
@@ -560,164 +665,5 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('public-grid')) {
         renderPublicStore();
     }
+    checkAffiliateSession();
 });
-// ==========================================
-// MÓDULO DE AFILIADOS Y RECUPERACIÓN VÍA WHATSAPP
-// ==========================================
-
-const ADMIN_WHATSAPP_NUMBER = "584121234567"; // Reemplaza por tu número de administración
-
-function openForgotPasswordModal() {
-    const modal = document.getElementById('modal-forgot-password');
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    }
-}
-
-function closeForgotPasswordModal() {
-    const modal = document.getElementById('modal-forgot-password');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
-}
-
-function handleSendWhatsAppReset(event) {
-    event.preventDefault();
-    const phoneInput = document.getElementById('reset-phone-input').value.trim();
-    
-    if (!phoneInput) {
-        alert("Por favor, ingresa tu número telefónico registrado.");
-        return;
-    }
-
-    const otpToken = 'VY-' + Math.floor(100000 + Math.random() * 900000);
-    
-    const resetRequests = JSON.parse(localStorage.getItem('vylon_reset_tokens') || '{}');
-    resetRequests[phoneInput] = {
-        token: otpToken,
-        timestamp: Date.now()
-    };
-    localStorage.setItem('vylon_reset_tokens', JSON.stringify(resetRequests));
-
-    const message = `Hola VYLON Support, solicito restablecer la contraseña de mi cuenta de Afiliado.\n\n` +
-                    `*Teléfono registrado:* ${phoneInput}\n` +
-                    `*Código de Verificación:* ${otpToken}`;
-
-    const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
-
-    closeForgotPasswordModal();
-    window.open(whatsappUrl, '_blank');
-}
-
-function handleAffiliateLogin(event) {
-    event.preventDefault();
-    const alias = document.getElementById('aff-login-alias').value.trim();
-    const pass = document.getElementById('aff-login-pass').value.trim();
-
-    // Utiliza la clave de base de datos unificada vylon_db_affiliates
-    const affiliates = JSON.parse(localStorage.getItem('vylon_db_affiliates') || '[]');
-    const user = affiliates.find(a => a.alias === alias && a.password === pass);
-
-    if (user) {
-        localStorage.setItem('vylon_active_affiliate', JSON.stringify(user));
-        checkAffiliateSession();
-    } else {
-        alert("Credenciales incorrectas. Verifica tu alias y contraseña.");
-    }
-}
-
-function handleAffiliateRegister(event) {
-    event.preventDefault();
-    const alias = document.getElementById('aff-reg-alias').value.trim();
-    const phone = document.getElementById('aff-reg-phone').value.trim();
-    const pass = document.getElementById('aff-reg-pass').value.trim();
-
-    let affiliates = JSON.parse(localStorage.getItem('vylon_db_affiliates') || '[]');
-
-    if (affiliates.some(a => a.alias === alias)) {
-        alert("El alias ya está registrado. Elige otro.");
-        return;
-    }
-
-    const newAffiliate = {
-        id: 'AFF-' + Date.now(),
-        alias: alias,
-        phone: phone,
-        password: pass,
-        createdAt: new Date().toISOString()
-    };
-
-    affiliates.push(newAffiliate);
-    localStorage.setItem('vylon_db_affiliates', JSON.stringify(affiliates));
-    localStorage.setItem('vylon_active_affiliate', JSON.stringify(newAffiliate));
-    
-    alert("¡Registro exitoso! Bienvenido al panel de afiliados.");
-    checkAffiliateSession();
-}
-
-function checkAffiliateSession() {
-    const activeUser = JSON.parse(localStorage.getItem('vylon_active_affiliate') || 'null');
-    const authSection = document.getElementById('affiliate-auth-section');
-    const dashboardSection = document.getElementById('affiliate-dashboard-section');
-
-    if (activeUser) {
-        if (authSection) authSection.classList.add('hidden');
-        if (dashboardSection) dashboardSection.classList.remove('hidden');
-        renderAffiliateDashboard(activeUser);
-    } else {
-        if (authSection) authSection.classList.remove('hidden');
-        if (dashboardSection) dashboardSection.classList.add('hidden');
-    }
-}
-
-function logoutAffiliate() {
-    localStorage.removeItem('vylon_active_affiliate');
-    checkAffiliateSession();
-}
-
-function renderAffiliateDashboard(user) {
-    const aliasLabel = document.getElementById('aff-user-alias');
-    if (aliasLabel) aliasLabel.textContent = user.alias;
-
-    const products = JSON.parse(localStorage.getItem('vylon_db_products') || '[]');
-    const tbody = document.getElementById('affiliate-links-table-body');
-    
-    if (!tbody) return;
-    tbody.innerHTML = '';
-
-    if (products.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">No hay productos disponibles para promocionar.</td></tr>`;
-        return;
-    }
-
-    const baseUrl = window.location.origin + window.location.pathname.replace('afiliado.html', 'index.html');
-
-    products.forEach(prod => {
-        const affLink = `${baseUrl}?ref=${user.alias}&prod=${prod.id}`;
-        const commission = (prod.price * 0.10).toFixed(2);
-
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-gray-50 transition";
-        tr.innerHTML = `
-            <td class="p-3 font-semibold text-gray-800">${prod.name || 'Producto'}</td>
-            <td class="p-3">$${parseFloat(prod.price || 0).toFixed(2)}</td>
-            <td class="p-3 text-green-600 font-bold">$${commission}</td>
-            <td class="p-3 text-right">
-                <button onclick="copyToClipboard('${affLink}')" class="px-3 py-1 bg-slate-900 text-white rounded text-xs font-semibold hover:bg-slate-800 transition inline-flex items-center gap-1">
-                    <i class="fa-regular fa-copy"></i> Copiar Link
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        alert("Enlace copiado al portapapeles");
-    }).catch(err => {
-        console.error("Error al copiar link: ", err);
-    });
-}
