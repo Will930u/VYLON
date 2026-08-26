@@ -32,6 +32,9 @@
                 <div>
                     <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Contraseña</label>
                     <input type="password" id="aff-login-pass" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
+                    <a href="#" onclick="openForgotPasswordModal()" class="text-xs text-blue-400 hover:underline inline-block mt-2">
+                       ¿Olvidaste tu contraseña?
+                    </a>
                 </div>
                 <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 rounded-lg text-xs transition">
                     Entrar al Panel
@@ -115,7 +118,37 @@
             </div>
         </div>
     </div>
-
+<!-- Modal para Recuperación de Contraseña vía WhatsApp -->
+<div id="modal-forgot-password" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+  <div class="bg-white border border-gray-200 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl relative">
+    <button onclick="closeForgotPasswordModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-sm">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+    <div class="text-center space-y-1">
+      <div class="w-12 h-12 mx-auto bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xl mb-2">
+        <i class="fa-brands fa-whatsapp"></i>
+      </div>
+      <h3 class="text-base font-bold text-gray-900">Recuperar Contraseña</h3>
+      <p class="text-xs text-gray-500">Ingresa tu número de teléfono registrado para enviarte un código de verificación.</p>
+    </div>
+    
+    <form onsubmit="handleSendWhatsAppReset(event)" class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Teléfono Registrado</label>
+        <input type="tel" id="reset-phone-input" required placeholder="ej: 04121234567" class="w-full p-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-500">
+      </div>
+      
+      <div class="flex gap-2">
+        <button type="button" onclick="closeForgotPasswordModal()" class="w-1/2 py-2 text-xs text-gray-600 bg-gray-100 border border-gray-300 rounded-lg font-semibold hover:bg-gray-200 transition">
+          Cancelar
+        </button>
+        <button type="submit" class="w-1/2 py-2 text-xs text-white bg-green-600 hover:bg-green-500 font-bold rounded-lg transition flex items-center justify-center gap-1.5 shadow">
+          <i class="fa-brands fa-whatsapp text-sm"></i> Solicitar Token
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
     <script src="app.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
