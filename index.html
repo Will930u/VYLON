@@ -1,122 +1,185 @@
 <!DOCTYPE html>
 <html lang="es" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VYLON | Catálogo Oficial</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        blood: {
-                            500: '#dc2626',
-                            600: '#b91c1c',
-                            700: '#991b1b',
-                            800: '#8b0000',
-                            900: '#450a0a',
-                        },
-                        vylon: {
-                            bg: '#121212',
-                            card: '#18181b',
-                            border: '#27272a',
-                        }
-                    }
-                }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VYLON | Stock & Flow - Sistema Integral</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            vylon: {
+              gold: '#D4AF37',
+              goldHover: '#B89628',
+              darkBg: '#0b0b0b',
+              cardBg: '#121212',
+              inputBg: '#1a1a1a',
+              border: '#2a2a2a'
             }
+          }
         }
-    </script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background-color: #121212; color: #ffffff; }
-        .glow-blood { box-shadow: 0 0 12px rgba(220, 38, 38, 0.3); }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #121212; }
-        ::-webkit-scrollbar-thumb { background: #450a0a; border-radius: 4px; }
-    </style>
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #0b0b0b;
+      color: #e5e5e5;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .amber-gradient-text {
+      background: linear-gradient(135deg, #FFE259 0%, #FFA751 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #121212;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #333;
+      border-radius: 4px;
+    }
+    .tab-active {
+      color: #D4AF37;
+      border-bottom: 2px solid #D4AF37;
+    }
+    .tab-inactive {
+      color: #888888;
+      border-bottom: 2px solid transparent;
+    }
+  </style>
 </head>
-<body class="min-h-screen flex flex-col bg-vylon-bg text-white">
+<body class="min-h-screen flex flex-col justify-between relative selection:bg-yellow-500 selection:text-black">
 
-    <header class="sticky top-0 z-40 bg-vylon-bg/95 backdrop-blur border-b border-vylon-border px-4 py-3">
-        <div class="max-w-7xl mx-auto flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-full bg-blood-800 border-2 border-blood-500 flex items-center justify-center glow-blood">
-                    <i class="fa-solid fa-droplet text-white text-lg"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl font-black tracking-widest text-white uppercase">VYLON</h1>
-                    <p id="store-slogan" class="text-xs text-zinc-400">Entrega gratis en Maracay • Pago Móvil & USDT</p>
-                </div>
-            </div>
-
-            <div class="flex items-center space-x-3">
-                <div class="hidden md:flex flex-col text-right px-3 py-1 bg-vylon-card border border-vylon-border rounded-lg">
-                    <span class="text-[10px] text-zinc-400 uppercase tracking-wider">Tasa En Tiempo Real</span>
-                    <span id="rate-badge" class="text-xs font-bold text-blood-500">Cargando Tasa...</span>
-                </div>
-
-                <button onclick="toggleCartModal()" class="relative bg-vylon-card hover:bg-zinc-800 text-white px-4 py-2 rounded-lg border border-vylon-border transition flex items-center gap-2">
-                    <i class="fa-solid fa-cart-shopping text-blood-500"></i>
-                    <span class="text-sm font-semibold">Carrito</span>
-                    <span id="cart-counter" class="bg-blood-700 text-white text-xs font-bold px-2 py-0.5 rounded-full">0</span>
-                </button>
-            </div>
+  <header class="bg-vylon-cardBg border-b border-vylon-border sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-3 cursor-pointer select-none" onclick="handleLogoClick()">
+        <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-600 to-amber-300 flex items-center justify-center font-bold text-black text-xl shadow-lg">V</div>
+        <div>
+          <h1 class="text-xl font-bold tracking-wide amber-gradient-text">VYLON</h1>
+          <p class="text-[10px] text-gray-400">Stock & Flow | Maracay, Venezuela</p>
         </div>
-    </header>
-
-    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-        <div class="flex flex-col sm:flex-row gap-4 bg-vylon-card p-4 rounded-xl border border-vylon-border">
-            <div class="relative flex-grow">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3.5 text-zinc-500"></i>
-                <input type="text" id="catalog-search" oninput="filterCatalog()" placeholder="Buscar por producto o escanea código SKU..." class="w-full bg-vylon-bg border border-vylon-border rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-blood-500">
-            </div>
-            <button onclick="startScanner('catalog')" class="bg-blood-800 hover:bg-blood-700 text-white px-4 py-2.5 rounded-lg border border-blood-600 transition flex items-center justify-center gap-2 font-semibold text-sm">
-                <i class="fa-solid fa-barcode"></i> Escanear Código
-            </button>
-        </div>
-
-        <div id="scanner-container" class="hidden bg-vylon-card p-4 rounded-xl border border-blood-700 relative">
-            <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-bold text-blood-500 uppercase"><i class="fa-solid fa-camera"></i> Escáner Activo</span>
-                <button onclick="stopScanner()" class="text-zinc-400 hover:text-white text-sm">&times; Cerrar</button>
-            </div>
-            <div id="interactive" class="viewport w-full h-48 bg-black rounded-lg overflow-hidden"></div>
-        </div>
-
-        <div id="catalog-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            </div>
-    </main>
-
-    <div id="modal-cart" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-vylon-card border border-vylon-border rounded-xl p-6 w-full max-w-lg flex flex-col max-h-[90vh]">
-            <div class="flex justify-between items-center mb-4 border-b border-vylon-border pb-3">
-                <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-cart-shopping text-blood-500"></i> Tu Pedido
-                </h3>
-                <button onclick="toggleCartModal()" class="text-zinc-400 hover:text-white text-xl">&times;</button>
-            </div>
-            
-            <div id="cart-items-list" class="flex-grow overflow-y-auto space-y-3 pr-2 my-2">
-                </div>
-
-            <div class="border-t border-vylon-border pt-4 space-y-3">
-                <div class="space-y-1 text-right">
-                    <div class="text-xl font-black text-blood-500" id="cart-total-usd">$0.00 USDT</div>
-                    <div class="text-xs text-zinc-400" id="cart-total-bs">Bs. 0.00</div>
-                </div>
-                <input type="text" id="client-name" placeholder="Tu Nombre Completo" class="w-full bg-vylon-bg border border-vylon-border rounded-lg p-2.5 text-sm text-white focus:border-blood-500">
-                <input type="text" id="client-phone" placeholder="Número Telefónico" class="w-full bg-vylon-bg border border-vylon-border rounded-lg p-2.5 text-sm text-white focus:border-blood-500">
-                
-                <button onclick="submitOrderWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition flex items-center justify-center gap-2">
-                    <i class="fa-brands fa-whatsapp text-lg"></i> Enviar Pedido por WhatsApp
-                </button>
-            </div>
-        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <a href="afiliado.html" class="bg-vylon-inputBg hover:bg-zinc-800 text-vylon-gold border border-vylon-gold/30 px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+          <i class="fa-solid fa-users"></i>
+          <span>Programa Afiliados</span>
+        </a>
+      </div>
     </div>
+  </header>
 
-    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
-    <script src="app.js"></script>
+  <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+    <section id="view-store" class="space-y-8">
+      <div class="bg-gradient-to-b from-vylon-cardBg to-vylon-darkBg border border-vylon-border rounded-2xl p-6 sm:p-10 text-center relative overflow-hidden shadow-2xl">
+        <div class="w-12 h-12 mx-auto bg-amber-500/10 text-vylon-gold rounded-full flex items-center justify-center text-xl mb-4 border border-vylon-gold/20">
+          <i class="fa-solid fa-sparkles"></i>
+        </div>
+        <span class="text-[11px] font-mono tracking-widest text-vylon-gold uppercase">Tienda Oficial VYLON</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-2">Productos con Entrega GRATIS en Maracay</h2>
+        <p id="store-slogan" class="text-xs sm:text-sm text-gray-400 max-w-xl mx-auto mt-2">
+          Paga con Pago Móvil a tasa BCV o USDT. Verificación directa mediante Telegram.
+        </p>
+        <div class="mt-3 text-[11px] text-amber-400/80 font-mono">
+          HORARIO DE ATENCIÓN: 09:00 A 03:00 LUN-VIE
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-boxes-stacked text-vylon-gold"></i> Productos en Inventario
+          </h3>
+          <div class="w-full sm:w-72 relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-gray-500"></i>
+            <input type="text" id="public-search" oninput="renderPublicStore()" placeholder="Buscar producto por nombre o código..." class="w-full pl-8 pr-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-vylon-gold">
+          </div>
+        </div>
+
+        <div id="public-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="bg-vylon-cardBg border-t border-vylon-border py-6 text-center text-xs text-gray-500">
+    <div class="max-w-7xl mx-auto px-4 space-y-2">
+      <p>&copy; 2026 VYLON Stock & Flow - Sistema de Gestión y Ventas</p>
+      <p class="text-[10px] text-gray-600">Acceso restringido para administración activo mediante combinación autorizada.</p>
+    </div>
+  </footer>
+
+  <div id="modal-admin-auth" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-vylon-cardBg border border-vylon-gold/40 rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative">
+      <button onclick="closeAdminAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-sm">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 mx-auto bg-amber-500/10 text-vylon-gold rounded-full flex items-center justify-center text-xl border border-vylon-gold/30 mb-2">
+          <i class="fa-solid fa-user-shield"></i>
+        </div>
+        <h3 class="text-base font-bold text-white">Acceso Administrador</h3>
+        <p class="text-xs text-gray-400">Ingresa la clave de acceso restringido</p>
+      </div>
+      <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+        <div>
+          <input type="password" id="admin-pin-input" placeholder="••••••••" required class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-sm text-center tracking-widest text-white focus:outline-none focus:border-vylon-gold">
+        </div>
+        <button type="submit" class="w-full bg-vylon-gold hover:bg-vylon-goldHover text-black font-bold py-2 rounded-lg text-xs transition">
+          Ingresar al Panel
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-buy" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-vylon-cardBg border border-vylon-border rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+      <button onclick="closeBuyModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-sm">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <h3 class="text-base font-bold text-white border-b border-vylon-border pb-2">Finalizar Pedido</h3>
+      <div id="buy-product-details" class="bg-vylon-inputBg p-3 rounded-xl border border-vylon-border text-xs space-y-1">
+        </div>
+      <form onsubmit="submitCustomerOrder(event)" class="space-y-3">
+        <input type="hidden" id="buy-product-id">
+        <input type="hidden" id="buy-affiliate-alias">
+        <div>
+          <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Tu Nombre Completo</label>
+          <input type="text" id="buy-client-name" required placeholder="ej: Juan Pérez" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white focus:outline-none focus:border-vylon-gold">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Correo Electrónico</label>
+          <input type="email" id="buy-client-email" required placeholder="juan@ejemplo.com" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white focus:outline-none focus:border-vylon-gold">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Cantidad a Comprar</label>
+          <input type="number" id="buy-client-qty" min="1" value="1" oninput="calculateOrderTotal()" required class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white focus:outline-none focus:border-vylon-gold">
+        </div>
+
+        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-1 text-xs">
+          <p class="font-bold text-vylon-gold">Datos para Pago Móvil (Tasa BCV):</p>
+          <p class="text-gray-300"><strong>Banco:</strong> <span id="pm-info-bank">0102 Venezuela</span></p>
+          <p class="text-gray-300"><strong>Teléfono:</strong> <span id="pm-info-phone">04129830982</span></p>
+          <p class="text-gray-300"><strong>Cédula:</strong> <span id="pm-info-ci">21101658</span></p>
+          <p class="text-amber-400 font-bold mt-2">Total a Pagar: <span id="buy-total-calculated">0.00 USDT</span></p>
+        </div>
+
+        <button type="submit" class="w-full bg-vylon-gold hover:bg-vylon-goldHover text-black font-bold py-2.5 rounded-lg text-xs transition shadow-lg">
+          <i class="fa-brands fa-whatsapp mr-1.5"></i> Confirmar y Enviar Pedido
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
