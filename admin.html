@@ -1,185 +1,205 @@
 <!DOCTYPE html>
 <html lang="es" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VYLON | Stock & Flow - Sistema Integral</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            vylon: {
-              gold: '#D4AF37',
-              goldHover: '#B89628',
-              darkBg: '#0b0b0b',
-              cardBg: '#121212',
-              inputBg: '#1a1a1a',
-              border: '#2a2a2a'
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      background-color: #0b0b0b;
-      color: #e5e5e5;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    .amber-gradient-text {
-      background: linear-gradient(135deg, #FFE259 0%, #FFA751 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .custom-scrollbar::-webkit-scrollbar {
-      height: 6px;
-      width: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #121212;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #333;
-      border-radius: 4px;
-    }
-    .tab-active {
-      color: #D4AF37;
-      border-bottom: 2px solid #D4AF37;
-    }
-    .tab-inactive {
-      color: #888888;
-      border-bottom: 2px solid transparent;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Vylon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between relative selection:bg-yellow-500 selection:text-black">
-
-  <header class="bg-vylon-cardBg border-b border-vylon-border sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-      <div class="flex items-center space-x-3 cursor-pointer select-none" onclick="handleLogoClick()">
-        <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-600 to-amber-300 flex items-center justify-center font-bold text-black text-xl shadow-lg">V</div>
-        <div>
-          <h1 class="text-xl font-bold tracking-wide amber-gradient-text">VYLON</h1>
-          <p class="text-[10px] text-gray-400">Stock & Flow | Maracay, Venezuela</p>
+<body class="bg-slate-900 text-gray-100 font-sans min-h-screen pb-12">
+    <header class="bg-slate-950 p-4 border-b border-slate-800 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white text-lg">A</div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wide text-white">Vylon - Panel de Control Administrativo</h1>
+                    <p class="text-[10px] text-gray-400">Gestión General de Stock, Pedidos y Afiliados</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="exportStockJSON()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg font-bold border border-slate-700 text-gray-300">
+                    <i class="fa-solid fa-download mr-1"></i> Respaldar JSON
+                </button>
+                <button onclick="importStockJSON()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg font-bold border border-slate-700 text-gray-300">
+                    <i class="fa-solid fa-upload mr-1"></i> Restaurar
+                </button>
+                <a href="index.html" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-1.5 rounded-lg font-bold transition">
+                    Ver Tienda
+                </a>
+            </div>
         </div>
-      </div>
-      <div class="flex items-center space-x-2">
-        <a href="afiliado.html" class="bg-vylon-inputBg hover:bg-zinc-800 text-vylon-gold border border-vylon-gold/30 px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
-          <i class="fa-solid fa-users"></i>
-          <span>Programa Afiliados</span>
-        </a>
-      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto my-6 px-4 space-y-6">
+        <nav class="flex flex-wrap gap-2 border-b border-slate-800 pb-4">
+            <button onclick="switchAdminTab('tab-estadisticas')" id="btn-tab-estadisticas" class="admin-tab-btn bg-blue-600 text-white text-xs px-4 py-2 rounded-lg font-bold">Estadísticas</button>
+            <button onclick="switchAdminTab('tab-productos')" id="btn-tab-productos" class="admin-tab-btn bg-slate-800 text-gray-300 text-xs px-4 py-2 rounded-lg font-bold hover:bg-slate-700">Productos y Inventario</button>
+            <button onclick="switchAdminTab('tab-pedidos')" id="btn-tab-pedidos" class="admin-tab-btn bg-slate-800 text-gray-300 text-xs px-4 py-2 rounded-lg font-bold hover:bg-slate-700 relative">
+                Pedidos Registrados
+            </button>
+            <button onclick="switchAdminTab('tab-config')" id="btn-tab-config" class="admin-tab-btn bg-slate-800 text-gray-300 text-xs px-4 py-2 rounded-lg font-bold hover:bg-slate-700">Configuración General</button>
+        </nav>
+
+        <section id="tab-estadisticas" class="admin-tab-content space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+                    <p class="text-xs text-gray-400 font-bold uppercase">Total Productos</p>
+                    <p id="stat-total-products" class="text-2xl font-black text-white mt-1">0</p>
+                </div>
+                <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+                    <p class="text-xs text-gray-400 font-bold uppercase">Unidades en Stock</p>
+                    <p id="stat-total-stock" class="text-2xl font-black text-blue-400 mt-1">0</p>
+                </div>
+                <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+                    <p class="text-xs text-gray-400 font-bold uppercase">Pedidos Verificados</p>
+                    <p id="stat-total-orders" class="text-2xl font-black text-green-400 mt-1">0</p>
+                </div>
+                <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+                    <p class="text-xs text-gray-400 font-bold uppercase">Ingresos Estimados</p>
+                    <p id="stat-total-revenue" class="text-2xl font-black text-yellow-400 mt-1">$0.00 USDT</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/50 p-5 rounded-2xl border border-slate-800 h-72">
+                <h3 class="text-xs font-bold text-gray-400 uppercase mb-4">Nivel de Stock por Producto</h3>
+                <canvas id="chartStockOverview"></canvas>
+            </div>
+        </section>
+
+        <section id="tab-productos" class="admin-tab-content hidden space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-base font-bold text-white">Inventario Activo</h2>
+                <button onclick="openNewProductModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-lg font-bold transition">
+                    + Nuevo Producto
+                </button>
+            </div>
+
+            <div class="bg-slate-800/50 rounded-2xl border border-slate-800 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-gray-300">
+                        <thead class="bg-slate-950 text-gray-400 font-bold uppercase border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">Código</th>
+                                <th class="p-3">Producto</th>
+                                <th class="p-3">Precio (USDT)</th>
+                                <th class="p-3">Precio (Bs)</th>
+                                <th class="p-3">Stock</th>
+                                <th class="p-3 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-products-table-body" class="divide-y divide-slate-800">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-pedidos" class="admin-tab-content hidden space-y-6">
+            <h2 class="text-base font-bold text-white">Listado General de Pedidos</h2>
+            <div class="bg-slate-800/50 rounded-2xl border border-slate-800 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-gray-300">
+                        <thead class="bg-slate-950 text-gray-400 font-bold uppercase border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">ID Pedido</th>
+                                <th class="p-3">Fecha</th>
+                                <th class="p-3">Cliente</th>
+                                <th class="p-3">Producto</th>
+                                <th class="p-3">Cantidad</th>
+                                <th class="p-3">Total USDT</th>
+                                <th class="p-3">Afiliado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-orders-table-body" class="divide-y divide-slate-800">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-config" class="admin-tab-content hidden space-y-6">
+            <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-800 max-w-2xl space-y-4">
+                <h2 class="text-base font-bold text-white border-b border-slate-700 pb-2">Configuración General de la Tienda</h2>
+                <form onsubmit="saveAdminConfig(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Eslogan Principal</label>
+                        <input type="text" id="cfg-slogan" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Tasa de Cambio (Bs / USDT)</label>
+                        <input type="number" step="0.01" id="cfg-exchange-rate" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Banco PM</label>
+                            <input type="text" id="cfg-pm-bank" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Teléfono PM</label>
+                            <input type="text" id="cfg-pm-phone" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Cédula PM</label>
+                            <input type="text" id="cfg-pm-ci" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                        </div>
+                    </div>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 py-2.5 rounded-lg transition">
+                        Guardar Cambios
+                    </button>
+                </form>
+            </div>
+        </section>
     </div>
-  </header>
 
-  <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
-    <section id="view-store" class="space-y-8">
-      <div class="bg-gradient-to-b from-vylon-cardBg to-vylon-darkBg border border-vylon-border rounded-2xl p-6 sm:p-10 text-center relative overflow-hidden shadow-2xl">
-        <div class="w-12 h-12 mx-auto bg-amber-500/10 text-vylon-gold rounded-full flex items-center justify-center text-xl mb-4 border border-vylon-gold/20">
-          <i class="fa-solid fa-sparkles"></i>
+    <div id="modal-product-edit" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl relative">
+            <button onclick="closeProductModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-sm">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 id="modal-product-title" class="text-base font-bold text-white">Añadir Producto</h3>
+            <form onsubmit="saveProductForm(event)" class="space-y-3">
+                <input type="hidden" id="edit-prod-id">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nombre del Producto</label>
+                    <input type="text" id="edit-prod-name" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Código / Barcode</label>
+                        <input type="text" id="edit-prod-code" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Precio (USDT)</label>
+                        <input type="number" step="0.01" id="edit-prod-price" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Cantidad en Stock</label>
+                        <input type="number" id="edit-prod-stock" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Comisión Afiliado ($)</label>
+                        <input type="number" step="0.01" id="edit-prod-comm" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-lg transition mt-2">
+                    Guardar Producto
+                </button>
+            </form>
         </div>
-        <span class="text-[11px] font-mono tracking-widest text-vylon-gold uppercase">Tienda Oficial VYLON</span>
-        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-2">Productos con Entrega GRATIS en Maracay</h2>
-        <p id="store-slogan" class="text-xs sm:text-sm text-gray-400 max-w-xl mx-auto mt-2">
-          Paga con Pago Móvil a tasa BCV o USDT. Verificación directa mediante Telegram.
-        </p>
-        <div class="mt-3 text-[11px] text-amber-400/80 font-mono">
-          HORARIO DE ATENCIÓN: 09:00 A 03:00 LUN-VIE
-        </div>
-      </div>
-
-      <div class="space-y-4">
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-boxes-stacked text-vylon-gold"></i> Productos en Inventario
-          </h3>
-          <div class="w-full sm:w-72 relative">
-            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-gray-500"></i>
-            <input type="text" id="public-search" oninput="renderPublicStore()" placeholder="Buscar producto por nombre o código..." class="w-full pl-8 pr-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-vylon-gold">
-          </div>
-        </div>
-
-        <div id="public-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="bg-vylon-cardBg border-t border-vylon-border py-6 text-center text-xs text-gray-500">
-    <div class="max-w-7xl mx-auto px-4 space-y-2">
-      <p>&copy; 2026 VYLON Stock & Flow - Sistema de Gestión y Ventas</p>
-      <p class="text-[10px] text-gray-600">Acceso restringido para administración activo mediante combinación autorizada.</p>
     </div>
-  </footer>
 
-  <div id="modal-admin-auth" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-vylon-cardBg border border-vylon-gold/40 rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl relative">
-      <button onclick="closeAdminAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-sm">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-      <div class="text-center space-y-1">
-        <div class="w-12 h-12 mx-auto bg-amber-500/10 text-vylon-gold rounded-full flex items-center justify-center text-xl border border-vylon-gold/30 mb-2">
-          <i class="fa-solid fa-user-shield"></i>
-        </div>
-        <h3 class="text-base font-bold text-white">Acceso Administrador</h3>
-        <p class="text-xs text-gray-400">Ingresa la clave de acceso restringido</p>
-      </div>
-      <form onsubmit="handleAdminLogin(event)" class="space-y-4">
-        <div>
-          <input type="password" id="admin-pin-input" placeholder="••••••••" required class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-sm text-center tracking-widest text-white focus:outline-none focus:border-vylon-gold">
-        </div>
-        <button type="submit" class="w-full bg-vylon-gold hover:bg-vylon-goldHover text-black font-bold py-2 rounded-lg text-xs transition">
-          Ingresar al Panel
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <div id="modal-buy" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-vylon-cardBg border border-vylon-border rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
-      <button onclick="closeBuyModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-sm">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-      <h3 class="text-base font-bold text-white border-b border-vylon-border pb-2">Finalizar Pedido</h3>
-      <div id="buy-product-details" class="bg-vylon-inputBg p-3 rounded-xl border border-vylon-border text-xs space-y-1">
-        </div>
-      <form onsubmit="submitCustomerOrder(event)" class="space-y-3">
-        <input type="hidden" id="buy-product-id">
-        <input type="hidden" id="buy-affiliate-alias">
-        <div>
-          <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Tu Nombre Completo</label>
-          <input type="text" id="buy-client-name" required placeholder="ej: Juan Pérez" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white focus:outline-none focus:border-vylon-gold">
-        </div>
-        <div>
-          <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Correo Electrónico</label>
-          <input type="email" id="buy-client-email" required placeholder="juan@ejemplo.com" class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white focus:outline-none focus:border-vylon-gold">
-        </div>
-        <div>
-          <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Cantidad a Comprar</label>
-          <input type="number" id="buy-client-qty" min="1" value="1" oninput="calculateOrderTotal()" required class="w-full px-3 py-1.5 bg-vylon-inputBg border border-vylon-border rounded-lg text-xs text-white focus:outline-none focus:border-vylon-gold">
-        </div>
-
-        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-1 text-xs">
-          <p class="font-bold text-vylon-gold">Datos para Pago Móvil (Tasa BCV):</p>
-          <p class="text-gray-300"><strong>Banco:</strong> <span id="pm-info-bank">0102 Venezuela</span></p>
-          <p class="text-gray-300"><strong>Teléfono:</strong> <span id="pm-info-phone">04129830982</span></p>
-          <p class="text-gray-300"><strong>Cédula:</strong> <span id="pm-info-ci">21101658</span></p>
-          <p class="text-amber-400 font-bold mt-2">Total a Pagar: <span id="buy-total-calculated">0.00 USDT</span></p>
-        </div>
-
-        <button type="submit" class="w-full bg-vylon-gold hover:bg-vylon-goldHover text-black font-bold py-2.5 rounded-lg text-xs transition shadow-lg">
-          <i class="fa-brands fa-whatsapp mr-1.5"></i> Confirmar y Enviar Pedido
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAdminDashboard();
+        });
+    </script>
 </body>
 </html>
