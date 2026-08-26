@@ -2,7 +2,7 @@
 const DEFAULT_EXCHANGE_RATE = 78.50;
 const ADMIN_PIN = "1234"; // Clave restringida para el panel de administración
 
-// Claves de integración EmailJS / Gmail (Reemplaza por tus credenciales de EmailJS)
+// Claves de integración EmailJS / Gmail
 const EMAILJS_PUBLIC_KEY = "TU_PUBLIC_KEY";
 const EMAILJS_SERVICE_ID = "TU_SERVICE_ID";
 const EMAILJS_TEMPLATE_ID = "TU_TEMPLATE_ID";
@@ -25,7 +25,9 @@ const DEFAULT_CONFIG = {
     exchangeRate: DEFAULT_EXCHANGE_RATE,
     pmPhone: "04129830982",
     pmBank: "0102 venezuela",
-    pmCi: "21101658"
+    pmCi: "21101658",
+    telegramToken: "",
+    telegramChatId: ""
 };
 
 // Inicializador de Datos LocalStorage
@@ -51,7 +53,28 @@ function getOrders() { return JSON.parse(localStorage.getItem('vylon_db_orders')
 function getAffiliates() { return JSON.parse(localStorage.getItem('vylon_db_affiliates') || '[]'); }
 function getConfig() { return JSON.parse(localStorage.getItem('vylon_db_config') || JSON.stringify(DEFAULT_CONFIG)); }
 
-// --- MÓDULO ACCESO FANTASMA ADMIN (Atajo Ctrl+Shift+A y 5 Clics en Logo) ---
+// --- MOTOR DE NOTIFICACIONES A TELEGRAM ---
+async function notifyTelegram(message) {
+    const config = getConfig();
+    if (!config.telegramToken || !config.telegramChatId) return;
+
+    const url = `https://api.telegram.org/bot${config.telegramToken}/sendMessage`;
+    try {
+        await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: config.telegramChatId,
+                text: message,
+                parse_mode: 'HTML'
+            })
+        });
+    } catch (error) {
+        console.error("Error al enviar notificación a Telegram:", error);
+    }
+}
+
+// --- MÓDULO ACCESO FANTASMA ADMIN ---
 let logoClickCount = 0;
 let logoClickTimer = null;
 
@@ -92,6 +115,7 @@ function handleAdminLogin(event) {
         closeAdminAuthModal();
         window.location.href = 'admin.html';
     } else {
+        notifyTelegram(`🚨 <b>ALERTA DE SEGURIDAD VYLON</b>\n\nIntento de acceso NO AUTORIZADO al Panel Administrativo con PIN incorrecto.`);
         alert("Clave de acceso incorrecta.");
     }
 }
@@ -223,13 +247,21 @@ function submitCustomerOrder(event) {
     orders.push(newOrder);
     localStorage.setItem('vylon_db_orders', JSON.stringify(orders));
 
+    const config = getConfig();
+    const totalBs = (newOrder.priceUSDT * config.exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2 });
+
+    // Notificación automática a Telegram sobre la Venta
+    notifyTelegram(`🛒 <b>¡NUEVA VENTA REGISTRADA!</b>\n\n<b>ID Pedido:</b> ${newOrder.id}\n<b>Producto:</b> ${product.name} (x${qty})\n<b>Cliente:</b> ${clientName}\n<b>Monto Total:</b> $${newOrder.priceUSDT.toFixed(2)} USDT (Bs. ${totalBs})\n<b>Afiliado:</b> ${affiliateAlias}`);
+
+    // Alerta de Stock Crítico (<= 5 unidades)
+    if (products[productIndex].stock <= 5) {
+        notifyTelegram(`⚠️ <b>ALERTA CRÍTICA DE STOCK</b>\n\nEl producto <b>${product.name}</b> le quedan solo <b>${products[productIndex].stock}</b> unidades disponibles en inventario.`);
+    }
+
     closeBuyModal();
     renderPublicStore();
 
-    const config = getConfig();
-    const totalBs = (newOrder.priceUSDT * config.exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2 });
     const message = `Hola VYLON, acabo de realizar un pedido:\n\n*Pedido:* ${newOrder.id}\n*Producto:* ${product.name} (x${qty})\n*Cliente:* ${clientName}\n*Total:* ${newOrder.priceUSDT.toFixed(2)} USDT (Bs. ${totalBs})\n\nAdjunto comprobante de Pago Móvil.`;
-    
     window.open(`https://wa.me/584129830982?text=${encodeURIComponent(message)}`, '_blank');
 }
 
@@ -250,9 +282,6 @@ function closeForgotPasswordModal() {
     }
 }
 
-/**
- * Envía el token de recuperación por correo usando EmailJS / Gmail
- */
 function handleSendEmailReset(event) {
     event.preventDefault();
     const emailOrAlias = document.getElementById('reset-email-input').value.trim();
@@ -336,6 +365,7 @@ function handleAffiliateLogin(event) {
         localStorage.setItem('vylon_active_affiliate', JSON.stringify(user));
         checkAffiliateSession();
     } else {
+        notifyTelegram(`🚨 <b>INTENTO FALLIDO DE INICIO DE SESIÓN AFILIADO</b>\n\n<b>Alias/Email:</b> ${aliasOrEmail}`);
         alert("Credenciales incorrectas. Verifica tu alias/correo y contraseña.");
     }
 }
@@ -370,6 +400,9 @@ function handleAffiliateRegister(event) {
     localStorage.setItem('vylon_db_affiliates', JSON.stringify(affiliates));
     localStorage.setItem('vylon_active_affiliate', JSON.stringify(newAffiliate));
     
+    // Notificación automática a Telegram sobre Nuevo Afiliado
+    notifyTelegram(`👤 <b>NUEVO AFILIADO REGISTRADO</b>\n\n<b>Alias:</b> ${alias}\n<b>Correo:</b> ${email}\n<b>Teléfono:</b> ${phone}\n<b>Banco PM:</b> ${bank}`);
+
     alert("¡Registro exitoso! Bienvenido al panel de afiliados.");
     checkAffiliateSession();
 }
@@ -543,6 +576,8 @@ function renderAdminDashboard() {
     document.getElementById('cfg-pm-bank').value = config.pmBank;
     document.getElementById('cfg-pm-phone').value = config.pmPhone;
     document.getElementById('cfg-pm-ci').value = config.pmCi;
+    document.getElementById('cfg-telegram-token').value = config.telegramToken || '';
+    document.getElementById('cfg-telegram-chatid').value = config.telegramChatId || '';
 }
 
 // ABM Productos
@@ -591,12 +626,14 @@ function saveProductForm(event) {
         const idx = products.findIndex(p => p.id === parseInt(id));
         if (idx !== -1) {
             products[idx] = { ...products[idx], name, code, priceUSDT, stock, commissionUSDT };
+            notifyTelegram(`📦 <b>PRODUCTO ACTUALIZADO EN VYLON</b>\n\n<b>Nombre:</b> ${name}\n<b>Precio:</b> $${priceUSDT} USDT\n<b>Stock actual:</b> ${stock} unidades`);
         }
     } else {
         products.push({
             id: Date.now(),
             name, code, priceUSDT, stock, damaged: 0, sales: 0, commissionUSDT
         });
+        notifyTelegram(`✨ <b>NUEVO PRODUCTO AGREGADO A VYLON</b>\n\n<b>Código:</b> ${code}\n<b>Nombre:</b> ${name}\n<b>Precio:</b> $${priceUSDT} USDT\n<b>Stock Inicial:</b> ${stock} unidades`);
     }
 
     localStorage.setItem('vylon_db_products', JSON.stringify(products));
@@ -605,10 +642,15 @@ function saveProductForm(event) {
 }
 
 function deleteProduct(id) {
+    let products = getProducts();
+    const prod = products.find(p => p.id === id);
+
     if (confirm("¿Estás seguro de eliminar este producto?")) {
-        let products = getProducts();
         products = products.filter(p => p.id !== id);
         localStorage.setItem('vylon_db_products', JSON.stringify(products));
+        if (prod) {
+            notifyTelegram(`🗑️ <b>PRODUCTO ELIMINADO DEL CATÁLOGO</b>\n\nSe ha eliminado el producto <b>${prod.name}</b> (${prod.code}).`);
+        }
         renderAdminDashboard();
     }
 }
@@ -620,10 +662,14 @@ function saveAdminConfig(event) {
     const pmBank = document.getElementById('cfg-pm-bank').value;
     const pmPhone = document.getElementById('cfg-pm-phone').value;
     const pmCi = document.getElementById('cfg-pm-ci').value;
+    const telegramToken = document.getElementById('cfg-telegram-token').value.trim();
+    const telegramChatId = document.getElementById('cfg-telegram-chatid').value.trim();
 
-    const config = { slogan, exchangeRate, pmBank, pmPhone, pmCi };
+    const config = { slogan, exchangeRate, pmBank, pmPhone, pmCi, telegramToken, telegramChatId };
     localStorage.setItem('vylon_db_config', JSON.stringify(config));
+    
     alert("Configuración de la tienda guardada con éxito.");
+    notifyTelegram(`⚙️ <b>CONFIGURACIÓN DE LA TIENDA ACTUALIZADA</b>\n\n<b>Tasa USDT:</b> Bs. ${exchangeRate}\n<b>Banco PM:</b> ${pmBank}\n<b>Teléfono PM:</b> ${pmPhone}`);
     renderAdminDashboard();
 }
 
@@ -653,6 +699,7 @@ function importStockJSON() {
             if (data.affiliates) localStorage.setItem('vylon_db_affiliates', JSON.stringify(data.affiliates));
             if (data.config) localStorage.setItem('vylon_db_config', JSON.stringify(data.config));
             alert("Respaldo restaurado con éxito.");
+            notifyTelegram(`🔄 <b>SISTEMA RESTAURADO EN VYLON</b>\n\nSe ha importado y cargado un nuevo archivo de respaldo JSON.`);
             renderAdminDashboard();
         } catch(e) {
             alert("Error al procesar el archivo JSON. Verifica el formato.");
