@@ -19,7 +19,8 @@ const DEFAULT_CONFIG = {
     pmBank: "0102 venezuela",
     pmCi: "21101658",
     telegramToken: "",
-    telegramChatId: ""
+    telegramChatId: "",
+    lastTelegramUpdateId: 0
 };
 
 // Inicialización de la Base de Datos Local
@@ -54,6 +55,37 @@ function generateAffiliateCode() {
     return code;
 }
 
+// GESTIÓN DINÁMICA DE LOGO Y FAVICON EN PESTAÑA
+function applyGlobalLogo(logoBase64) {
+    if (!logoBase64) return;
+    
+    // Guardar en LocalStorage
+    localStorage.setItem('vylon_db_logo', logoBase64);
+
+    // 1. Actualizar imágenes de logo en el DOM
+    const logoImgs = document.querySelectorAll('.vylon-logo-img');
+    logoImgs.forEach(img => {
+        img.src = logoBase64;
+    });
+
+    // 2. Actualizar o crear Favicon en la pestaña (<head>)
+    let faviconLink = document.querySelector("link[rel*='icon']");
+    if (!faviconLink) {
+        faviconLink = document.createElement('link');
+        faviconLink.rel = 'shortcut icon';
+        document.getElementsByTagName('head')[0].appendChild(faviconLink);
+    }
+    faviconLink.href = logoBase64;
+}
+
+// Cargar Logo Guardado al Iniciar la Página
+function loadSavedLogo() {
+    const savedLogo = localStorage.getItem('vylon_db_logo');
+    if (savedLogo) {
+        applyGlobalLogo(savedLogo);
+    }
+}
+
 // API Dólar Oficial BCV Integration
 async function fetchBCVExchangeRate() {
     try {
@@ -82,7 +114,7 @@ async function fetchBCVExchangeRate() {
     }
 }
 
-// Telegram Bot Engine
+// Telegram Bot Engine & Notificaciones
 async function notifyTelegram(message) {
     const config = getConfig();
     if (!config.telegramToken || !config.telegramChatId) return;
@@ -102,6 +134,79 @@ async function notifyTelegram(message) {
         console.error("Error Telegram:", error);
     }
 }
+
+// TELEGRAM POLLING: ESCUCHAR COMANDO /logo Y FOTO ADJUNTA
+async function checkTelegramUpdates() {
+    const config = getConfig();
+    if (!config.telegramToken) return;
+
+    const offset = (config.lastTelegramUpdateId || 0) + 1;
+    const url = `https://api.telegram.org/bot${config.telegramToken}/getUpdates?offset=${offset}&timeout=5`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.ok && data.result.length > 0) {
+            for (const update of data.result) {
+                config.lastTelegramUpdateId = update.update_id;
+                localStorage.setItem('vylon_db_config', JSON.stringify(config));
+
+                const message = update.message;
+                if (!message) continue;
+
+                const caption = message.caption || "";
+                const text = message.text || "";
+
+                // Verificar si se envió el comando /logo (en texto o pie de foto)
+                if (caption.startsWith('/logo') || text.startsWith('/logo')) {
+                    if (message.photo && message.photo.length > 0) {
+                        // Obtener la foto con mejor resolución (último elemento del array photo)
+                        const photoObj = message.photo[message.photo.length - 1];
+                        await processTelegramLogoPhoto(config.telegramToken, photoObj.file_id);
+                    } else {
+                        notifyTelegram("⚠️ <b>Formato incorrecto:</b> Por favor envía la foto del logo adjuntando el comando <code>/logo</code> en la leyenda (caption) de la imagen.");
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Error consultando actualizaciones de Telegram:", error);
+    }
+}
+
+// Descargar foto de Telegram y convertira a Base64 para guardarla como logo
+async function processTelegramLogoPhoto(token, fileId) {
+    try {
+        const getFileUrl = `https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`;
+        const resFile = await fetch(getFileUrl);
+        const fileData = await resFile.json();
+
+        if (fileData.ok && fileData.result.file_path) {
+            const filePath = fileData.result.file_path;
+            const downloadUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+
+            // Descargar la imagen y convertirla a Blob -> Base64
+            const imgRes = await fetch(downloadUrl);
+            const blob = await imgRes.blob();
+
+            const reader = new FileReader();
+            reader.onloadend = function () {
+                const base64Image = reader.result;
+                applyGlobalLogo(base64Image);
+                notifyTelegram("✅ <b>¡LOGO ACTUALIZADO CON ÉXITO!</b>\n\nEl logo de la tienda y el icono de la pestaña (favicon) se han actualizado correctamente desde Telegram.");
+                if (typeof renderPublicStore === 'function') renderPublicStore();
+            };
+            reader.readAsDataURL(blob);
+        }
+    } catch (err) {
+        console.error("Error al procesar la foto de Telegram:", err);
+        notifyTelegram("❌ <b>Error:</b> No se pudo descargar ni procesar la imagen del logo.");
+    }
+}
+
+// Iniciar verificación continua de comandos de Telegram cada 6 segundos
+setInterval(checkTelegramUpdates, 6000);
 
 // LÓGICA MÓDULO DE AFILIADOS CON CÓDIGO ÚNICO ANÓNIMO
 function checkAffiliateSession() {
@@ -143,7 +248,6 @@ function handleAffiliateRegister(event) {
         return;
     }
 
-    // Generar código único que no exista previamente
     let code = generateAffiliateCode();
     while (affiliates.some(a => a.code === code)) {
         code = generateAffiliateCode();
@@ -154,7 +258,7 @@ function handleAffiliateRegister(event) {
         name,
         alias,
         email,
-        code, // Código único asignado (Ej: VYL-A7K9)
+        code,
         password
     };
 
@@ -192,7 +296,6 @@ function renderAffiliateDashboard(affiliate) {
     document.getElementById('affiliate-name-display').innerText = affiliate.name;
     document.getElementById('affiliate-alias-display').innerText = affiliate.alias;
 
-    // Asegurar que usuarios antiguos tengan código si fueron creados previamente
     if (!affiliate.code) {
         let affiliates = getAffiliates();
         affiliate.code = generateAffiliateCode();
@@ -203,7 +306,6 @@ function renderAffiliateDashboard(affiliate) {
         }
     }
 
-    // Construir el Link usando ÚNICAMENTE el código personal seguro (ej: ?ref=VYL-A7K9)
     const baseUrl = window.location.origin + window.location.pathname.replace('afiliado.html', 'index.html');
     const refLink = `${baseUrl}?ref=${affiliate.code}`;
     document.getElementById('affiliate-referral-link').value = refLink;
@@ -212,7 +314,6 @@ function renderAffiliateDashboard(affiliate) {
     const products = getProducts();
     const config = getConfig();
 
-    // Buscar pedidos hechos con el código único o el alias del afiliado
     const affOrders = orders.filter(o => o.affiliateRef === affiliate.code || o.affiliateAlias === affiliate.alias);
 
     let totalEarnedUSDT = 0;
@@ -340,6 +441,7 @@ function renderPublicStore() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    loadSavedLogo();
     if (document.getElementById('public-grid')) {
         renderPublicStore();
     }
