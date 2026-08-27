@@ -63,7 +63,8 @@
   <header class="bg-vylon-cardBg border-b border-vylon-border sticky top-0 z-30">
     <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
       <div class="flex items-center space-x-3 cursor-pointer select-none" onclick="handleLogoClick()">
-        <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-600 to-amber-300 flex items-center justify-center font-bold text-black text-xl shadow-lg">V</div>
+        <!-- LOGO ACTUALIZADO: Reemplazado el div de la letra V por la etiqueta img con la clase vylon-logo-img -->
+        <img src="logo.png" alt="Vylon Logo" class="vylon-logo-img w-10 h-10 rounded-full object-cover border border-vylon-gold/30 shadow-lg">
         <div>
           <h1 class="text-xl font-bold tracking-wide amber-gradient-text">VYLON</h1>
           <p class="text-[10px] text-gray-400">Stock & Flow | Maracay, Venezuela</p>
@@ -106,7 +107,7 @@
         </div>
 
         <div id="public-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          </div>
+        </div>
       </div>
     </section>
   </main>
@@ -148,7 +149,7 @@
       </button>
       <h3 class="text-base font-bold text-white border-b border-vylon-border pb-2">Finalizar Pedido</h3>
       <div id="buy-product-details" class="bg-vylon-inputBg p-3 rounded-xl border border-vylon-border text-xs space-y-1">
-        </div>
+      </div>
       <form onsubmit="submitCustomerOrder(event)" class="space-y-3">
         <input type="hidden" id="buy-product-id">
         <input type="hidden" id="buy-affiliate-alias">
