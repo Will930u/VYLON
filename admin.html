@@ -6,6 +6,7 @@
     <title>Panel de Administración - Vylon</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
     </style>
@@ -19,7 +20,7 @@
 <body class="bg-slate-900 text-gray-100 font-sans min-h-screen pb-12">
     <header class="bg-slate-950 p-4 border-b border-slate-800 sticky top-0 z-30">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-3 cursor-pointer" id="logo-vylon" onclick="handleLogoClick()">
+            <div class="flex items-center gap-3 cursor-pointer" id="logo-vylon">
                 <img src="logo.png" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'48\' fill=\'%23121212\' stroke=\'%23D4AF37\' stroke-width=\'4\'/><text x=\'50%\' y=\'58%\' font-size=\'32\' font-weight=\'bold\' fill=\'%23D4AF37\' text-anchor=\'middle\' font-family=\'sans-serif\'>V</text></svg>'" alt="Vylon Admin" class="vylon-logo-img w-9 h-9 rounded-xl object-cover border border-slate-700 shadow-md">
                 <div>
                     <h1 class="text-lg font-bold tracking-wide text-white">Vylon - Panel Administrativo</h1>
@@ -80,123 +81,164 @@
                     <i class="fa-solid fa-plus"></i> Nuevo Producto
                 </button>
             </div>
-            <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-900 text-gray-400 uppercase font-bold border-b border-slate-800">
-                        <tr>
-                            <th class="p-3">Código</th>
-                            <th class="p-3">Producto</th>
-                            <th class="p-3">Precio (USDT)</th>
-                            <th class="p-3">Stock</th>
-                            <th class="p-3">Dañados</th>
-                            <th class="p-3">Comisión ($)</th>
-                            <th class="p-3 text-right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-inventory-tbody" class="divide-y divide-slate-800/50">
-                    </tbody>
-                </table>
+            <div class="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-gray-300">
+                        <thead class="bg-slate-900 text-gray-400 uppercase font-bold border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">Código</th>
+                                <th class="p-3">Producto</th>
+                                <th class="p-3">Precio (USDT)</th>
+                                <th class="p-3">Stock</th>
+                                <th class="p-3">Comisión</th>
+                                <th class="p-3">Ventas</th>
+                                <th class="p-3">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-inventory-tbody" class="divide-y divide-slate-800"></tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
         <section id="admin-sec-orders" class="space-y-4 hidden">
-            <h2 class="text-base font-bold text-white">Historial de Órdenes Recibidas</h2>
-            <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-900 text-gray-400 uppercase font-bold border-b border-slate-800">
-                        <tr>
-                            <th class="p-3">ID Pedido</th>
-                            <th class="p-3">Fecha</th>
-                            <th class="p-3">Cliente</th>
-                            <th class="p-3">Producto</th>
-                            <th class="p-3">Total USDT</th>
-                            <th class="p-3">Ref. Afiliado</th>
-                            <th class="p-3">Estado</th>
-                            <th class="p-3 text-right">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-orders-tbody" class="divide-y divide-slate-800/50">
-                    </tbody>
-                </table>
+            <h2 class="text-base font-bold text-white">Registro de Pedidos Recibidos</h2>
+            <div class="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-gray-300">
+                        <thead class="bg-slate-900 text-gray-400 uppercase font-bold border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">ID Pedido</th>
+                                <th class="p-3">Fecha</th>
+                                <th class="p-3">Cliente</th>
+                                <th class="p-3">Detalle Producto</th>
+                                <th class="p-3">Monto</th>
+                                <th class="p-3">Referido</th>
+                                <th class="p-3">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-orders-tbody" class="divide-y divide-slate-800"></tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
         <section id="admin-sec-affiliates" class="space-y-4 hidden">
             <h2 class="text-base font-bold text-white">Directorio de Afiliados Registrados</h2>
-            <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-900 text-gray-400 uppercase font-bold border-b border-slate-800">
-                        <tr>
-                            <th class="p-3">Nombre</th>
-                            <th class="p-3">Alias</th>
-                            <th class="p-3">Código Único</th>
-                            <th class="p-3">Correo</th>
-                            <th class="p-3">Ventas</th>
-                            <th class="p-3">Comisiones Generadas</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-affiliates-tbody" class="divide-y divide-slate-800/50">
-                    </tbody>
-                </table>
+            <div class="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-gray-300">
+                        <thead class="bg-slate-900 text-gray-400 uppercase font-bold border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">Código</th>
+                                <th class="p-3">Nombre / Alias</th>
+                                <th class="p-3">Correo Electrónico</th>
+                                <th class="p-3">Estado</th>
+                                <th class="p-3">Ventas</th>
+                                <th class="p-3">Comisión Ganada</th>
+                                <th class="p-3">Acciones de Gestión</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-affiliates-tbody" class="divide-y divide-slate-800"></tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
         <section id="admin-sec-config" class="space-y-4 hidden">
-            <h2 class="text-base font-bold text-white">Configuración del Sistema y Pagos</h2>
-            <form onsubmit="saveSystemConfig(event)" class="bg-slate-950 border border-slate-800 p-6 rounded-xl space-y-4 max-w-2xl">
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Eslogan de la Tienda</label>
-                    <input type="text" id="cfg-slogan" required class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white">
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="bg-slate-950 p-6 rounded-xl border border-slate-800 max-w-2xl space-y-4">
+                <h2 class="text-base font-bold text-white border-b border-slate-800 pb-2">Configuración del Sistema</h2>
+                <form onsubmit="saveSystemConfig(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Eslogan Principal</label>
+                        <input type="text" id="cfg-slogan" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+                    </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Tasa BCV (Bs. / USDT)</label>
-                        <input type="number" step="0.01" id="cfg-exchange-rate" required class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white">
+                        <input type="number" step="0.01" id="cfg-exchange-rate" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Cédula Pago Móvil</label>
-                        <input type="text" id="cfg-pm-ci" required class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white">
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Teléfono Pago Móvil</label>
+                            <input type="text" id="cfg-pm-phone" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Banco Pago Móvil</label>
+                            <input type="text" id="cfg-pm-bank" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Cédula Pago Móvil</label>
+                            <input type="text" id="cfg-pm-ci" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+                        </div>
                     </div>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Teléfono Pago Móvil</label>
-                        <input type="text" id="cfg-pm-phone" required class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Telegram Bot Token</label>
+                            <input type="text" id="cfg-telegram-token" placeholder="Bot Token" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Telegram Chat ID</label>
+                            <input type="text" id="cfg-telegram-chatid" placeholder="Chat ID" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white font-mono">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Banco Pago Móvil</label>
-                        <input type="text" id="cfg-pm-bank" required class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white">
+                    <div class="flex gap-3 pt-2">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition">
+                            Guardar Configuración
+                        </button>
+                        <button type="button" onclick="exportStockJSON()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs px-5 py-2.5 rounded-lg border border-slate-700 transition">
+                            Exportar Backup (JSON)
+                        </button>
                     </div>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-800 pt-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Token Bot Telegram</label>
-                        <input type="text" id="cfg-telegram-token" placeholder="123456789:ABC..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Chat ID Telegram</label>
-                        <input type="text" id="cfg-telegram-chatid" placeholder="-100xxxxxxx" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white">
-                    </div>
-                </div>
-                <div class="pt-2 flex gap-3">
-                    <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs px-4 py-2 rounded-lg transition">
-                        Guardar Cambios
-                    </button>
-                    <button type="button" onclick="exportStockJSON()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition">
-                        Exportar Respaldo DB
-                    </button>
-                </div>
-            </form>
+                </form>
+            </div>
         </section>
     </main>
 
-    <div id="modal-edit-prod" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl relative">
-            <button onclick="closeEditProdModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-sm">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-            <h3 id="modal-prod-title" class="text-base font-bold text-white border-b border-slate-800 pb-2">Editar Producto</h3>
-            <form onsubmit="saveProductModal(event)" class="space-y-3">
+    <div id="modal-add-product" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-sm">Nuevo Producto</h3>
+                <button onclick="closeAddProductModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleAddProduct(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nombre del Producto</label>
+                    <input type="text" id="add-prod-name" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Código de Barras</label>
+                        <input type="text" id="add-prod-code" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Precio USDT ($)</label>
+                        <input type="number" step="0.01" id="add-prod-price" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Cantidad Stock</label>
+                        <input type="number" id="add-prod-stock" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Comisión Afiliado ($)</label>
+                        <input type="number" step="0.01" id="add-prod-comm" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs py-2.5 rounded-lg transition mt-2">
+                    Guardar Nuevo Producto
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-edit-product" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-sm">Editar Producto</h3>
+                <button onclick="closeEditProductModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleEditProduct(event)" class="space-y-3">
                 <input type="hidden" id="edit-prod-id">
                 <div>
                     <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nombre del Producto</label>
@@ -204,11 +246,11 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Código de Barra / SKU</label>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Código de Barras</label>
                         <input type="text" id="edit-prod-code" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Precio (USDT)</label>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Precio USDT ($)</label>
                         <input type="number" step="0.01" id="edit-prod-price" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
                     </div>
                 </div>
@@ -223,7 +265,47 @@
                     </div>
                 </div>
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-lg transition mt-2">
-                    Guardar Producto
+                    Actualizar Producto
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-edit-affiliate" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-sm">Información Detallada del Afiliado</h3>
+                <button onclick="closeEditAffiliateModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="saveAffiliateChanges(event)" class="space-y-3">
+                <input type="hidden" id="edit-aff-id">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Código Único</label>
+                        <input type="text" id="edit-aff-code" readonly class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-amber-400 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Estado</label>
+                        <select id="edit-aff-status" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white font-bold">
+                            <option value="activo">Activo</option>
+                            <option value="bloqueado">Bloqueado</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nombre Completo</label>
+                    <input type="text" id="edit-aff-name" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Alias (Link Personalizado)</label>
+                    <input type="text" id="edit-aff-alias" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Correo Electrónico</label>
+                    <input type="email" id="edit-aff-email" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-lg transition mt-2">
+                    Guardar Cambios de Afiliado
                 </button>
             </form>
         </div>
@@ -232,10 +314,37 @@
     <script src="app.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            if (typeof renderAdminDashboard === 'function') {
-                renderAdminDashboard();
-            }
+            renderAdminDashboard();
         });
+
+        function switchAdminTab(tab) {
+            const secInv = document.getElementById('admin-sec-inventory');
+            const secOrd = document.getElementById('admin-sec-orders');
+            const secAff = document.getElementById('admin-sec-affiliates');
+            const secCfg = document.getElementById('admin-sec-config');
+
+            const btnInv = document.getElementById('tab-btn-inventory');
+            const btnOrd = document.getElementById('tab-btn-orders');
+            const btnAff = document.getElementById('tab-btn-affiliates');
+            const btnCfg = document.getElementById('tab-btn-config');
+
+            [secInv, secOrd, secAff, secCfg].forEach(sec => sec.classList.add('hidden'));
+            [btnInv, btnOrd, btnAff, btnCfg].forEach(btn => btn.className = "pb-2 text-gray-400 hover:text-white");
+
+            if (tab === 'inventory') {
+                secInv.classList.remove('hidden');
+                btnInv.className = "pb-2 text-amber-400 border-b-2 border-amber-400";
+            } else if (tab === 'orders') {
+                secOrd.classList.remove('hidden');
+                btnOrd.className = "pb-2 text-amber-400 border-b-2 border-amber-400";
+            } else if (tab === 'affiliates') {
+                secAff.classList.remove('hidden');
+                btnAff.className = "pb-2 text-amber-400 border-b-2 border-amber-400";
+            } else if (tab === 'config') {
+                secCfg.classList.remove('hidden');
+                btnCfg.className = "pb-2 text-amber-400 border-b-2 border-amber-400";
+            }
+        }
     </script>
 </body>
 </html>
