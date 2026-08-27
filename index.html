@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VYLON | Stock & Flow - Sistema Integral</title>
+  <title>VYLON | Stock & Flow - Tienda Oficial</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -25,7 +25,6 @@
     }
   </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       background-color: #0b0b0b;
@@ -48,14 +47,6 @@
       background: #333;
       border-radius: 4px;
     }
-    .tab-active {
-      color: #D4AF37;
-      border-bottom: 2px solid #D4AF37;
-    }
-    .tab-inactive {
-      color: #888888;
-      border-bottom: 2px solid transparent;
-    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between relative selection:bg-yellow-500 selection:text-black">
@@ -63,8 +54,7 @@
   <header class="bg-vylon-cardBg border-b border-vylon-border sticky top-0 z-30">
     <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
       <div class="flex items-center space-x-3 cursor-pointer select-none" onclick="handleLogoClick()">
-        <!-- LOGO ACTUALIZADO: Reemplazado el div de la letra V por la etiqueta img con la clase vylon-logo-img -->
-        <img src="logo.png" alt="Vylon Logo" class="vylon-logo-img w-10 h-10 rounded-full object-cover border border-vylon-gold/30 shadow-lg">
+        <img src="logo.png" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'48\' fill=\'%23121212\' stroke=\'%23D4AF37\' stroke-width=\'4\'/><text x=\'50%\' y=\'58%\' font-size=\'32\' font-weight=\'bold\' fill=\'%23D4AF37\' text-anchor=\'middle\' font-family=\'sans-serif\'>V</text></svg>'" alt="Vylon Logo" class="vylon-logo-img w-10 h-10 rounded-full object-cover border border-vylon-gold/30 shadow-lg">
         <div>
           <h1 class="text-xl font-bold tracking-wide amber-gradient-text">VYLON</h1>
           <p class="text-[10px] text-gray-400">Stock & Flow | Maracay, Venezuela</p>
@@ -129,11 +119,11 @@
           <i class="fa-solid fa-user-shield"></i>
         </div>
         <h3 class="text-base font-bold text-white">Acceso Administrador</h3>
-        <p class="text-xs text-gray-400">Ingresa la clave de acceso restringido</p>
+        <p class="text-xs text-gray-400">Ingresa la clave PIN (Predeterminada: 1234)</p>
       </div>
       <form onsubmit="handleAdminLogin(event)" class="space-y-4">
         <div>
-          <input type="password" id="admin-pin-input" placeholder="••••••••" required class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-sm text-center tracking-widest text-white focus:outline-none focus:border-vylon-gold">
+          <input type="password" id="admin-pin-input" placeholder="••••" required class="w-full px-3 py-2 bg-vylon-inputBg border border-vylon-border rounded-lg text-sm text-center tracking-widest text-white focus:outline-none focus:border-vylon-gold">
         </div>
         <button type="submit" class="w-full bg-vylon-gold hover:bg-vylon-goldHover text-black font-bold py-2 rounded-lg text-xs transition">
           Ingresar al Panel
