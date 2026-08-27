@@ -158,10 +158,8 @@ async function checkTelegramUpdates() {
                 const caption = message.caption || "";
                 const text = message.text || "";
 
-                // Verificar si se envió el comando /logo (en texto o pie de foto)
                 if (caption.startsWith('/logo') || text.startsWith('/logo')) {
                     if (message.photo && message.photo.length > 0) {
-                        // Obtener la foto con mejor resolución (último elemento del array photo)
                         const photoObj = message.photo[message.photo.length - 1];
                         await processTelegramLogoPhoto(config.telegramToken, photoObj.file_id);
                     } else {
@@ -175,7 +173,6 @@ async function checkTelegramUpdates() {
     }
 }
 
-// Descargar foto de Telegram y convertira a Base64 para guardarla como logo
 async function processTelegramLogoPhoto(token, fileId) {
     try {
         const getFileUrl = `https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`;
@@ -186,7 +183,6 @@ async function processTelegramLogoPhoto(token, fileId) {
             const filePath = fileData.result.file_path;
             const downloadUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
 
-            // Descargar la imagen y convertirla a Blob -> Base64
             const imgRes = await fetch(downloadUrl);
             const blob = await imgRes.blob();
 
@@ -205,7 +201,6 @@ async function processTelegramLogoPhoto(token, fileId) {
     }
 }
 
-// Iniciar verificación continua de comandos de Telegram cada 6 segundos
 setInterval(checkTelegramUpdates, 6000);
 
 // LÓGICA MÓDULO DE AFILIADOS CON CÓDIGO ÚNICO ANÓNIMO
@@ -440,6 +435,259 @@ function renderPublicStore() {
     });
 }
 
+// -------------------------------------------------------------
+// FUNCIONES Y RENDERING DE PANEL DE ADMINISTRACIÓN (admin.html)
+// -------------------------------------------------------------
+
+function switchAdminTab(tabName) {
+    const tabs = ['inventory', 'orders', 'affiliates', 'config'];
+    tabs.forEach(t => {
+        const sec = document.getElementById(`admin-sec-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (sec) sec.classList.add('hidden');
+        if (btn) {
+            btn.classList.remove('text-amber-400', 'border-b-2', 'border-amber-400');
+            btn.classList.add('text-gray-400');
+        }
+    });
+
+    const targetSec = document.getElementById(`admin-sec-${tabName}`);
+    const targetBtn = document.getElementById(`tab-btn-${tabName}`);
+    if (targetSec) targetSec.classList.remove('hidden');
+    if (targetBtn) {
+        targetBtn.classList.add('text-amber-400', 'border-b-2', 'border-amber-400');
+        targetBtn.classList.remove('text-gray-400');
+    }
+}
+
+function renderAdminDashboard() {
+    const products = getProducts();
+    const orders = getOrders();
+    const affiliates = getAffiliates();
+    const config = getConfig();
+
+    // 1. Estadísticas Globales
+    let totalSalesCount = orders.length;
+    let totalUSDT = orders.reduce((acc, o) => acc + (o.totalUSDT || 0), 0);
+    let totalBs = totalUSDT * config.exchangeRate;
+
+    const statSales = document.getElementById('stat-total-sales');
+    const statUSDT = document.getElementById('stat-total-usdt');
+    const statBs = document.getElementById('stat-total-bs');
+    const statAff = document.getElementById('stat-total-affiliates');
+
+    if (statSales) statSales.innerText = totalSalesCount;
+    if (statUSDT) statUSDT.innerText = `$${totalUSDT.toFixed(2)}`;
+    if (statBs) statBs.innerText = `Bs. ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
+    if (statAff) statAff.innerText = affiliates.length;
+
+    // 2. Tabla Inventario
+    const invTbody = document.getElementById('admin-inventory-tbody');
+    if (invTbody) {
+        invTbody.innerHTML = '';
+        products.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-900/50 transition";
+            tr.innerHTML = `
+                <td class="p-3 font-mono text-gray-400">${p.code}</td>
+                <td class="p-3 font-bold text-white">${p.name}</td>
+                <td class="p-3 font-bold text-emerald-400">$${p.priceUSDT.toFixed(2)}</td>
+                <td class="p-3"><span class="px-2 py-1 bg-slate-800 rounded font-bold text-white">${p.stock}</span></td>
+                <td class="p-3 text-red-400 font-bold">${p.damaged || 0}</td>
+                <td class="p-3 text-amber-400 font-bold">$${p.commissionUSDT.toFixed(2)}</td>
+                <td class="p-3 text-right space-x-2">
+                    <button onclick="editProductModal(${p.id})" class="bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white px-2.5 py-1 rounded transition text-xs font-bold">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button onclick="deleteProduct(${p.id})" class="bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white px-2.5 py-1 rounded transition text-xs font-bold">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            invTbody.appendChild(tr);
+        });
+    }
+
+    // 3. Tabla Órdenes
+    const ordersTbody = document.getElementById('admin-orders-tbody');
+    if (ordersTbody) {
+        ordersTbody.innerHTML = '';
+        orders.forEach(o => {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-900/50 transition";
+            tr.innerHTML = `
+                <td class="p-3 font-mono font-bold text-amber-400">${o.id}</td>
+                <td class="p-3 text-gray-400">${o.date || '-'}</td>
+                <td class="p-3 font-bold text-white">${o.clientName || 'Cliente'}</td>
+                <td class="p-3 text-gray-300">${o.productName} (x${o.qty})</td>
+                <td class="p-3 font-bold text-emerald-400">$${(o.totalUSDT || 0).toFixed(2)}</td>
+                <td class="p-3 font-mono text-blue-400">${o.affiliateRef || '-'}</td>
+                <td class="p-3"><span class="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-[10px] font-bold">Completado</span></td>
+                <td class="p-3 text-right">
+                    <button onclick="deleteOrder('${o.id}')" class="text-gray-500 hover:text-red-400 p-1"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            `;
+            ordersTbody.appendChild(tr);
+        });
+    }
+
+    // 4. Tabla Afiliados
+    const affTbody = document.getElementById('admin-affiliates-tbody');
+    if (affTbody) {
+        affTbody.innerHTML = '';
+        affiliates.forEach(a => {
+            const affOrders = orders.filter(o => o.affiliateRef === a.code || o.affiliateAlias === a.alias);
+            let commSum = 0;
+            affOrders.forEach(o => {
+                const prod = products.find(p => p.id === o.productId);
+                if (prod) commSum += prod.commissionUSDT * o.qty;
+            });
+
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-900/50 transition";
+            tr.innerHTML = `
+                <td class="p-3 font-bold text-white">${a.name}</td>
+                <td class="p-3 text-gray-400">@${a.alias}</td>
+                <td class="p-3 font-mono font-bold text-amber-400">${a.code || '-'}</td>
+                <td class="p-3 text-gray-400">${a.email}</td>
+                <td class="p-3 font-bold text-white">${affOrders.length}</td>
+                <td class="p-3 font-bold text-emerald-400">$${commSum.toFixed(2)} USDT</td>
+            `;
+            affTbody.appendChild(tr);
+        });
+    }
+
+    // 5. Cargar Configuración en Formulario
+    const sloganInput = document.getElementById('cfg-slogan');
+    const rateInput = document.getElementById('cfg-exchange-rate');
+    const ciInput = document.getElementById('cfg-pm-ci');
+    const phoneInput = document.getElementById('cfg-pm-phone');
+    const bankInput = document.getElementById('cfg-pm-bank');
+    const tokenInput = document.getElementById('cfg-telegram-token');
+    const chatInput = document.getElementById('cfg-telegram-chatid');
+
+    if (sloganInput) sloganInput.value = config.slogan || '';
+    if (rateInput) rateInput.value = config.exchangeRate || DEFAULT_EXCHANGE_RATE;
+    if (ciInput) ciInput.value = config.pmCi || '';
+    if (phoneInput) phoneInput.value = config.pmPhone || '';
+    if (bankInput) bankInput.value = config.pmBank || '';
+    if (tokenInput) tokenInput.value = config.telegramToken || '';
+    if (chatInput) chatInput.value = config.telegramChatId || '';
+}
+
+// Modal de Crear / Editar Producto
+function openAddProductModal() {
+    document.getElementById('edit-prod-id').value = '';
+    document.getElementById('edit-prod-name').value = '';
+    document.getElementById('edit-prod-code').value = '';
+    document.getElementById('edit-prod-price').value = '';
+    document.getElementById('edit-prod-stock').value = '';
+    document.getElementById('edit-prod-comm').value = '';
+    document.getElementById('modal-prod-title').innerText = 'Nuevo Producto';
+    document.getElementById('modal-edit-prod').classList.remove('hidden');
+}
+
+function editProductModal(id) {
+    const products = getProducts();
+    const prod = products.find(p => p.id === id);
+    if (!prod) return;
+
+    document.getElementById('edit-prod-id').value = prod.id;
+    document.getElementById('edit-prod-name').value = prod.name;
+    document.getElementById('edit-prod-code').value = prod.code;
+    document.getElementById('edit-prod-price').value = prod.priceUSDT;
+    document.getElementById('edit-prod-stock').value = prod.stock;
+    document.getElementById('edit-prod-comm').value = prod.commissionUSDT;
+    document.getElementById('modal-prod-title').innerText = 'Editar Producto';
+    document.getElementById('modal-edit-prod').classList.remove('hidden');
+}
+
+function closeEditProdModal() {
+    document.getElementById('modal-edit-prod').classList.add('hidden');
+}
+
+function saveProductModal(event) {
+    event.preventDefault();
+    const id = document.getElementById('edit-prod-id').value;
+    const name = document.getElementById('edit-prod-name').value.trim();
+    const code = document.getElementById('edit-prod-code').value.trim();
+    const priceUSDT = parseFloat(document.getElementById('edit-prod-price').value);
+    const stock = parseInt(document.getElementById('edit-prod-stock').value);
+    const commissionUSDT = parseFloat(document.getElementById('edit-prod-comm').value);
+
+    let products = getProducts();
+
+    if (id) {
+        const index = products.findIndex(p => p.id == id);
+        if (index !== -1) {
+            products[index] = { ...products[index], name, code, priceUSDT, stock, commissionUSDT };
+        }
+    } else {
+        const newProd = {
+            id: Date.now(),
+            name,
+            code,
+            priceUSDT,
+            stock,
+            damaged: 0,
+            sales: 0,
+            commissionUSDT
+        };
+        products.push(newProd);
+    }
+
+    localStorage.setItem('vylon_db_products', JSON.stringify(products));
+    closeEditProdModal();
+    renderAdminDashboard();
+}
+
+function deleteProduct(id) {
+    if (!confirm("¿Está seguro de eliminar este producto del inventario?")) return;
+    let products = getProducts().filter(p => p.id !== id);
+    localStorage.setItem('vylon_db_products', JSON.stringify(products));
+    renderAdminDashboard();
+}
+
+function deleteOrder(id) {
+    if (!confirm("¿Desea eliminar este registro de orden?")) return;
+    let orders = getOrders().filter(o => o.id !== id);
+    localStorage.setItem('vylon_db_orders', JSON.stringify(orders));
+    renderAdminDashboard();
+}
+
+function saveSystemConfig(event) {
+    event.preventDefault();
+    const config = getConfig();
+
+    config.slogan = document.getElementById('cfg-slogan').value.trim();
+    config.exchangeRate = parseFloat(document.getElementById('cfg-exchange-rate').value);
+    config.pmCi = document.getElementById('cfg-pm-ci').value.trim();
+    config.pmPhone = document.getElementById('cfg-pm-phone').value.trim();
+    config.pmBank = document.getElementById('cfg-pm-bank').value.trim();
+    config.telegramToken = document.getElementById('cfg-telegram-token').value.trim();
+    config.telegramChatId = document.getElementById('cfg-telegram-chatid').value.trim();
+
+    localStorage.setItem('vylon_db_config', JSON.stringify(config));
+    alert("¡Configuración guardada exitosamente!");
+    renderAdminDashboard();
+}
+
+function exportStockJSON() {
+    const data = {
+        products: getProducts(),
+        orders: getOrders(),
+        affiliates: getAffiliates(),
+        config: getConfig()
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `vylon_backup_${Date.now()}.json`;
+    a.click();
+}
+
+// Carga Inicial
 document.addEventListener('DOMContentLoaded', () => {
     loadSavedLogo();
     if (document.getElementById('public-grid')) {
