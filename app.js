@@ -44,6 +44,16 @@ function getOrders() { return JSON.parse(localStorage.getItem('vylon_db_orders')
 function getAffiliates() { return JSON.parse(localStorage.getItem('vylon_db_affiliates') || '[]'); }
 function getConfig() { return JSON.parse(localStorage.getItem('vylon_db_config') || JSON.stringify(DEFAULT_CONFIG)); }
 
+// Generador de Código Único de Afiliado (Ejemplo: VYL-8F2A)
+function generateAffiliateCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'VYL-';
+    for (let i = 0; i < 4; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+}
+
 // API Dólar Oficial BCV Integration
 async function fetchBCVExchangeRate() {
     try {
@@ -93,7 +103,7 @@ async function notifyTelegram(message) {
     }
 }
 
-// LÓGICA MÓDULO DE AFILIADOS
+// LÓGICA MÓDULO DE AFILIADOS CON CÓDIGO ÚNICO ANÓNIMO
 function checkAffiliateSession() {
     const activeAlias = sessionStorage.getItem('vylon_affiliate_session');
     const authSection = document.getElementById('section-auth');
@@ -103,7 +113,7 @@ function checkAffiliateSession() {
 
     if (activeAlias) {
         const affiliates = getAffiliates();
-        const aff = affiliates.find(a => a.alias === activeAlias);
+        const aff = affiliates.find(a => a.alias === activeAlias || a.code === activeAlias);
         if (aff) {
             authSection.classList.add('hidden');
             dashSection.classList.remove('hidden');
@@ -133,11 +143,18 @@ function handleAffiliateRegister(event) {
         return;
     }
 
+    // Generar código único que no exista previamente
+    let code = generateAffiliateCode();
+    while (affiliates.some(a => a.code === code)) {
+        code = generateAffiliateCode();
+    }
+
     const newAffiliate = {
         id: Date.now(),
         name,
         alias,
         email,
+        code, // Código único asignado (Ej: VYL-A7K9)
         password
     };
 
@@ -145,7 +162,7 @@ function handleAffiliateRegister(event) {
     localStorage.setItem('vylon_db_affiliates', JSON.stringify(affiliates));
 
     sessionStorage.setItem('vylon_affiliate_session', alias);
-    notifyTelegram(`👤 <b>NUEVO AFILIADO REGISTRADO</b>\n\n<b>Nombre:</b> ${name}\n<b>Alias:</b> ${alias}\n<b>Correo:</b> ${email}`);
+    notifyTelegram(`👤 <b>NUEVO AFILIADO REGISTRADO</b>\n\n<b>Nombre:</b> ${name}\n<b>Alias:</b> ${alias}\n<b>Código Único:</b> <code>${code}</code>\n<b>Correo:</b> ${email}`);
 
     checkAffiliateSession();
 }
@@ -156,13 +173,13 @@ function handleAffiliateLogin(event) {
     const password = document.getElementById('login-password').value;
 
     const affiliates = getAffiliates();
-    const aff = affiliates.find(a => (a.alias === identifier || a.email === identifier) && a.password === password);
+    const aff = affiliates.find(a => (a.alias === identifier || a.email === identifier || (a.code && a.code.toLowerCase() === identifier)) && a.password === password);
 
     if (aff) {
         sessionStorage.setItem('vylon_affiliate_session', aff.alias);
         checkAffiliateSession();
     } else {
-        alert("Credenciales incorrectas. Verifique usuario y contraseña.");
+        alert("Credenciales incorrectas. Verifique usuario, código o contraseña.");
     }
 }
 
@@ -175,15 +192,28 @@ function renderAffiliateDashboard(affiliate) {
     document.getElementById('affiliate-name-display').innerText = affiliate.name;
     document.getElementById('affiliate-alias-display').innerText = affiliate.alias;
 
+    // Asegurar que usuarios antiguos tengan código si fueron creados previamente
+    if (!affiliate.code) {
+        let affiliates = getAffiliates();
+        affiliate.code = generateAffiliateCode();
+        const index = affiliates.findIndex(a => a.id === affiliate.id);
+        if (index !== -1) {
+            affiliates[index].code = affiliate.code;
+            localStorage.setItem('vylon_db_affiliates', JSON.stringify(affiliates));
+        }
+    }
+
+    // Construir el Link usando ÚNICAMENTE el código personal seguro (ej: ?ref=VYL-A7K9)
     const baseUrl = window.location.origin + window.location.pathname.replace('afiliado.html', 'index.html');
-    const refLink = `${baseUrl}?ref=${affiliate.alias}`;
+    const refLink = `${baseUrl}?ref=${affiliate.code}`;
     document.getElementById('affiliate-referral-link').value = refLink;
 
     const orders = getOrders();
     const products = getProducts();
     const config = getConfig();
 
-    const affOrders = orders.filter(o => o.affiliateAlias === affiliate.alias);
+    // Buscar pedidos hechos con el código único o el alias del afiliado
+    const affOrders = orders.filter(o => o.affiliateRef === affiliate.code || o.affiliateAlias === affiliate.alias);
 
     let totalEarnedUSDT = 0;
 
@@ -272,7 +302,7 @@ function renderPublicStore() {
     if (sloganEl) sloganEl.innerText = config.slogan;
 
     const urlParams = new URLSearchParams(window.location.search);
-    const refAlias = urlParams.get('ref') || '';
+    const refCode = urlParams.get('ref') || '';
 
     grid.innerHTML = '';
 
@@ -300,7 +330,7 @@ function renderPublicStore() {
             <div>
                 <div class="text-lg font-black text-vylon-gold">${p.priceUSDT.toFixed(2)} USDT</div>
                 <div class="text-xs text-gray-400">Bs. ${priceBs}</div>
-                <button onclick="openBuyModal(${p.id}, '${refAlias}')" ${p.stock <= 0 ? 'disabled' : ''} class="w-full mt-3 bg-vylon-gold hover:bg-vylon-goldHover disabled:bg-gray-800 disabled:text-gray-600 text-black font-bold py-2 rounded-lg text-xs transition">
+                <button onclick="openBuyModal(${p.id}, '${refCode}')" ${p.stock <= 0 ? 'disabled' : ''} class="w-full mt-3 bg-vylon-gold hover:bg-vylon-goldHover disabled:bg-gray-800 disabled:text-gray-600 text-black font-bold py-2 rounded-lg text-xs transition">
                     ${p.stock > 0 ? 'Comprar Ahora' : 'Sin Existencias'}
                 </button>
             </div>
