@@ -1,183 +1,162 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Afiliados - Vylon</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Librería oficial de EmailJS -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans p-4 md:p-6 min-h-screen">
-    <div class="max-w-6xl mx-auto space-y-6">
-        <div class="flex justify-between items-center bg-slate-900 text-white p-4 rounded-xl shadow-md">
-            <h1 class="text-xl font-bold">Programa de Afiliados Vylon</h1>
-            <a href="index.html" class="text-xs bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-700 transition">
+<body class="bg-slate-900 text-gray-100 font-sans min-h-screen flex flex-col justify-between p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto w-full space-y-6">
+        <!-- Header -->
+        <header class="bg-slate-950 p-6 rounded-2xl border border-slate-800 flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold text-white">Programa de Afiliados Vylon</h1>
+                <p class="text-xs text-gray-400">Gana comisiones promoviendo nuestros productos</p>
+            </div>
+            <a href="index.html" class="bg-slate-800 hover:bg-slate-700 text-white text-xs px-4 py-2 rounded-xl border border-slate-700 font-bold transition">
                 Volver a la Tienda
             </a>
-        </div>
+        </header>
 
-        <!-- Sección de Autenticación de Afiliado -->
-        <div id="affiliate-auth" class="bg-white p-6 rounded-xl shadow-md border border-gray-200 max-w-md mx-auto space-y-4">
-            <h2 class="text-xl font-bold text-gray-800 text-center">Acceso de Afiliado</h2>
-            
-            <div class="flex border-b border-gray-200 text-xs font-bold text-center">
-                <button onclick="toggleAffAuthMode('login')" id="btn-mode-login" class="w-1/2 py-2 border-b-2 border-slate-900 text-slate-900">Iniciar Sesión</button>
-                <button onclick="toggleAffAuthMode('register')" id="btn-mode-register" class="w-1/2 py-2 border-b-2 border-transparent text-gray-400">Registrarse</button>
+        <!-- Formulario de Acceso / Registro -->
+        <div id="section-auth" class="bg-slate-950/80 border border-slate-800 rounded-2xl p-6 md:p-8 max-w-md mx-auto shadow-2xl">
+            <div class="flex border-b border-slate-800 mb-6">
+                <button onclick="switchAuthTab('login')" id="btn-tab-login" class="w-1/2 py-2 text-center font-bold text-xs border-b-2 border-blue-500 text-blue-400">Iniciar Sesión</button>
+                <button onclick="switchAuthTab('register')" id="btn-tab-register" class="w-1/2 py-2 text-center font-bold text-xs border-b-2 border-transparent text-gray-500 hover:text-gray-300">Registrarse</button>
             </div>
 
-            <!-- Formulario Iniciar Sesión -->
-            <form id="form-aff-login" onsubmit="handleAffiliateLogin(event)" class="space-y-3">
+            <!-- Iniciar Sesión -->
+            <form id="form-login" onsubmit="handleAffiliateLogin(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Alias (Usuario) o Correo</label>
-                    <input type="text" id="aff-login-alias" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Alias (Usuario) o Correo</label>
+                    <input type="text" id="login-identifier" required placeholder="utrera930@gmail.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:border-blue-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Contraseña</label>
-                    <input type="password" id="aff-login-pass" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
-                    <a href="#" onclick="openForgotPasswordModal()" class="text-xs text-blue-500 hover:underline inline-block mt-2 font-semibold">
-                       ¿Olvidaste tu contraseña?
-                    </a>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Contraseña</label>
+                    <input type="password" id="login-password" required placeholder="••••••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:border-blue-500 outline-none">
                 </div>
-                <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 rounded-lg text-xs transition">
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-xl transition">
                     Entrar al Panel
                 </button>
             </form>
 
-            <!-- Formulario Registro -->
-            <form id="form-aff-reg" onsubmit="handleAffiliateRegister(event)" class="space-y-3 hidden">
+            <!-- Registro -->
+            <form id="form-register" onsubmit="handleAffiliateRegister(event)" class="space-y-4 hidden">
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Alias Único</label>
-                    <input type="text" id="aff-reg-alias" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Correo Electrónico</label>
-                    <input type="email" id="aff-reg-email" required placeholder="correo@ejemplo.com" class="w-full p-2 border border-gray-300 rounded-lg text-xs">
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nombre Completo</label>
+                    <input type="text" id="reg-name" required placeholder="William Utrera" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:border-blue-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Contraseña</label>
-                    <input type="password" id="aff-reg-pass" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Banco</label>
-                        <input type="text" id="aff-reg-bank" placeholder="0102" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Cédula</label>
-                        <input type="text" id="aff-reg-ci" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
-                    </div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Alias (Link Personalizado)</label>
+                    <input type="text" id="reg-alias" required placeholder="william930" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:border-blue-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Teléfono Pago Móvil</label>
-                    <input type="text" id="aff-reg-phone" required class="w-full p-2 border border-gray-300 rounded-lg text-xs">
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Correo Electrónico</label>
+                    <input type="email" id="reg-email" required placeholder="correo@ejemplo.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:border-blue-500 outline-none">
                 </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg text-xs transition">
-                    Crear Cuenta e Ingresar
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Contraseña</label>
+                    <input type="password" id="reg-password" required placeholder="••••••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:border-blue-500 outline-none">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 rounded-xl transition">
+                    Crear Cuenta de Afiliado
                 </button>
             </form>
         </div>
 
-        <!-- Dashboard de Afiliado -->
-        <div id="affiliate-dashboard" class="hidden space-y-6">
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center">
+        <!-- Dashboard del Afiliado -->
+        <div id="section-dashboard" class="hidden space-y-6">
+            <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 flex justify-between items-center">
                 <div>
-                    <p class="text-xs text-gray-500 font-bold uppercase">Sesión Activa</p>
-                    <h2 class="text-xl font-black text-gray-800">Bienvenido, <span id="dash-alias-name" class="text-blue-600"></span></h2>
+                    <h2 class="text-base font-bold text-white">Bienvenido, <span id="affiliate-name-display" class="text-blue-400">---</span></h2>
+                    <p class="text-xs text-gray-400">Alias: <span id="affiliate-alias-display" class="font-mono text-white">---</span></p>
                 </div>
-                <button onclick="logoutAffiliate()" class="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 text-xs font-bold px-3 py-1.5 rounded-lg transition">
+                <button onclick="handleAffiliateLogout()" class="bg-red-900/40 hover:bg-red-800 text-red-200 text-xs px-4 py-2 rounded-xl font-bold border border-red-800/50 transition">
                     Cerrar Sesión
                 </button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
-                    <p class="text-xs text-gray-500 font-bold uppercase">Ventas Generadas</p>
-                    <p class="text-3xl font-black text-gray-800 mt-1" id="metric-sales">0</p>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500">
-                    <p class="text-xs text-gray-500 font-bold uppercase">Comisiones Acumuladas</p>
-                    <p class="text-2xl font-black text-green-600 mt-1" id="metric-commission">$0.00 USDT</p>
-                    <p class="text-xs text-gray-400" id="metric-commission-bs">Bs. 0,00</p>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-slate-700 text-xs text-gray-600 space-y-1">
-                    <p class="text-xs text-gray-500 font-bold uppercase mb-2">Datos de Cobro</p>
-                    <p><strong>Banco:</strong> <span id="dash-info-bank"></span></p>
-                    <p><strong>Teléfono:</strong> <span id="dash-info-phone"></span></p>
-                    <p><strong>Cédula:</strong> <span id="dash-info-ci"></span></p>
+            <!-- Link Referido -->
+            <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-2">
+                <label class="block text-xs font-bold text-gray-400 uppercase">Tu Link de Referido</label>
+                <div class="flex gap-2">
+                    <input type="text" id="affiliate-referral-link" readonly class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs font-mono text-emerald-400 outline-none">
+                    <button onclick="copyReferralLink()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap">
+                        Copiar Link
+                    </button>
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
-                <h3 class="text-base font-bold text-gray-800">Tus Enlaces de Afiliado por Producto</h3>
+            <!-- Métricas -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800">
+                    <p class="text-xs text-gray-400 font-bold uppercase">Ventas Referidas</p>
+                    <p id="aff-stat-sales" class="text-2xl font-black text-white mt-1">0</p>
+                </div>
+                <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800">
+                    <p class="text-xs text-gray-400 font-bold uppercase">Comisión Generada ($)</p>
+                    <p id="aff-stat-earnings" class="text-2xl font-black text-emerald-400 mt-1">$0.00 USDT</p>
+                </div>
+                <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800">
+                    <p class="text-xs text-gray-400 font-bold uppercase">Comisión Generada (Bs)</p>
+                    <p id="aff-stat-earnings-bs" class="text-2xl font-black text-blue-400 mt-1">Bs. 0.00</p>
+                </div>
+            </div>
+
+            <!-- Histórico -->
+            <div class="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden">
+                <div class="p-4 border-b border-slate-800 font-bold text-xs text-gray-400 uppercase">
+                    Histórico de Pedidos Referidos
+                </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs text-gray-600">
-                        <thead class="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200">
+                    <table class="w-full text-left text-xs text-gray-300">
+                        <thead class="bg-slate-900 text-gray-400 uppercase font-bold border-b border-slate-800">
                             <tr>
+                                <th class="p-3">ID Pedido</th>
+                                <th class="p-3">Fecha</th>
                                 <th class="p-3">Producto</th>
-                                <th class="p-3">Precio</th>
+                                <th class="p-3">Monto Venta</th>
                                 <th class="p-3">Tu Comisión</th>
-                                <th class="p-3 text-right">Enlace Promocional</th>
                             </tr>
                         </thead>
-                        <tbody id="affiliate-links-table-body" class="divide-y divide-gray-100">
-                        </tbody>
+                        <tbody id="affiliate-orders-tbody" class="divide-y divide-slate-800"></tbody>
                     </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal para Recuperación de Contraseña vía Gmail/EmailJS -->
-    <div id="modal-forgot-password" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-      <div class="bg-white border border-gray-200 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl relative">
-        <button onclick="closeForgotPasswordModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-sm">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-        <div class="text-center space-y-1">
-          <div class="w-12 h-12 mx-auto bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl mb-2">
-            <i class="fa-solid fa-envelope"></i>
-          </div>
-          <h3 class="text-base font-bold text-gray-900">Recuperar Contraseña</h3>
-          <p class="text-xs text-gray-500">Ingresa tu correo o usuario registrado para enviarte un código a tu bandeja de correo.</p>
-        </div>
-        
-        <form onsubmit="handleSendEmailReset(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Correo Electrónico o Usuario</label>
-            <input type="text" id="reset-email-input" required placeholder="ejemplo@correo.com o alias" class="w-full p-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-500">
-          </div>
-          
-          <div class="flex gap-2">
-            <button type="button" onclick="closeForgotPasswordModal()" class="w-1/2 py-2 text-xs text-gray-600 bg-gray-100 border border-gray-300 rounded-lg font-semibold hover:bg-gray-200 transition">
-              Cancelar
-            </button>
-            <button type="submit" class="w-1/2 py-2 text-xs text-white bg-blue-600 hover:bg-blue-500 font-bold rounded-lg transition flex items-center justify-center gap-1.5 shadow">
-              <i class="fa-solid fa-paper-plane text-sm"></i> Enviar Correo
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
+    <!-- Script principal de lógica de la app -->
     <script src="app.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            checkAffiliateSession();
+            if (typeof checkAffiliateSession === 'function') {
+                checkAffiliateSession();
+            }
         });
 
-        function toggleAffAuthMode(mode) {
-            if(mode === 'login') {
-                document.getElementById('form-aff-login').classList.remove('hidden');
-                document.getElementById('form-aff-reg').classList.add('hidden');
-                document.getElementById('btn-mode-login').className = "w-1/2 py-2 border-b-2 border-slate-900 text-slate-900 font-bold";
-                document.getElementById('btn-mode-register').className = "w-1/2 py-2 border-b-2 border-transparent text-gray-400 font-bold";
+        function switchAuthTab(tab) {
+            const formLogin = document.getElementById('form-login');
+            const formRegister = document.getElementById('form-register');
+            const btnLogin = document.getElementById('btn-tab-login');
+            const btnRegister = document.getElementById('btn-tab-register');
+
+            if (tab === 'login') {
+                formLogin.classList.remove('hidden');
+                formRegister.classList.add('hidden');
+                btnLogin.className = "w-1/2 py-2 text-center font-bold text-xs border-b-2 border-blue-500 text-blue-400";
+                btnRegister.className = "w-1/2 py-2 text-center font-bold text-xs border-b-2 border-transparent text-gray-500 hover:text-gray-300";
             } else {
-                document.getElementById('form-aff-login').classList.add('hidden');
-                document.getElementById('form-aff-reg').classList.remove('hidden');
-                document.getElementById('btn-mode-login').className = "w-1/2 py-2 border-b-2 border-transparent text-gray-400 font-bold";
-                document.getElementById('btn-mode-register').className = "w-1/2 py-2 border-b-2 border-slate-900 text-slate-900 font-bold";
+                formLogin.classList.add('hidden');
+                formRegister.classList.remove('hidden');
+                btnRegister.className = "w-1/2 py-2 text-center font-bold text-xs border-b-2 border-emerald-500 text-emerald-400";
+                btnLogin.className = "w-1/2 py-2 text-center font-bold text-xs border-b-2 border-transparent text-gray-500 hover:text-gray-300";
             }
         }
     </script>
