@@ -13,14 +13,19 @@
 <body class="bg-slate-900 text-gray-100 font-sans min-h-screen flex flex-col justify-between p-4 md:p-8">
 
     <div class="max-w-4xl mx-auto w-full space-y-6">
-        <!-- Header -->
+        <!-- Header con Logo Dinámico -->
         <header class="bg-slate-950 p-6 rounded-2xl border border-slate-800 flex justify-between items-center">
-            <div>
-                <h1 class="text-xl font-bold text-white">Programa de Afiliados Vylon</h1>
-                <p class="text-xs text-gray-400">Gana comisiones promoviendo nuestros productos</p>
+            <div class="flex items-center gap-4">
+                <!-- LOGO DINÁMICO: Detectado por app.js -->
+                <img src="logo.png" alt="Vylon Afiliados" class="vylon-logo-img w-10 h-10 rounded-xl object-cover border border-slate-700 shadow-md">
+                <div>
+                    <h1 class="text-xl font-bold text-white">Programa de Afiliados Vylon</h1>
+                    <p class="text-xs text-gray-400">Gana comisiones promoviendo nuestros productos</p>
+                </div>
             </div>
-            <a href="index.html" class="bg-slate-800 hover:bg-slate-700 text-white text-xs px-4 py-2 rounded-xl border border-slate-700 font-bold transition">
-                Volver a la Tienda
+            <a href="index.html" class="bg-slate-800 hover:bg-slate-700 text-white text-xs px-4 py-2 rounded-xl border border-slate-700 font-bold transition flex items-center gap-2">
+                <i class="fa-solid fa-store"></i>
+                <span>Volver a la Tienda</span>
             </a>
         </header>
 
@@ -87,8 +92,9 @@
                 <label class="block text-xs font-bold text-gray-400 uppercase">Tu Link de Referido</label>
                 <div class="flex gap-2">
                     <input type="text" id="affiliate-referral-link" readonly class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs font-mono text-emerald-400 outline-none">
-                    <button onclick="copyReferralLink()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap">
-                        Copiar Link
+                    <button onclick="copyReferralLink()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5">
+                        <i class="fa-solid fa-copy"></i>
+                        <span>Copiar Link</span>
                     </button>
                 </div>
             </div>
