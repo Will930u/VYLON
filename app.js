@@ -3,6 +3,8 @@ const DEFAULT_EXCHANGE_RATE = 78.50;
 const ADMIN_PIN = "1234";
 const DOLAR_API_URL = "https://ve.dolarapi.com/v1/dolares/oficial";
 
+const DEFAULT_LOGO_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23121212' stroke='%23D4AF37' stroke-width='4'/><text x='50%' y='58%' font-size='32' font-weight='bold' fill='%23D4AF37' text-anchor='middle' font-family='sans-serif'>V</text></svg>";
+
 const INITIAL_PRODUCTS = [
     { id: 1, name: "Bicarbonato de Sodio BicarBix 150g", code: "7599063000063", priceUSDT: 2.00, stock: 98, damaged: 0, sales: 6, commissionUSDT: 0.50 },
     { id: 2, name: "Vick VapoRub 12 g", code: "7599063000064", priceUSDT: 1.50, stock: 150, damaged: 0, sales: 2, commissionUSDT: 0.30 },
@@ -45,7 +47,7 @@ function getOrders() { return JSON.parse(localStorage.getItem('vylon_db_orders')
 function getAffiliates() { return JSON.parse(localStorage.getItem('vylon_db_affiliates') || '[]'); }
 function getConfig() { return JSON.parse(localStorage.getItem('vylon_db_config') || JSON.stringify(DEFAULT_CONFIG)); }
 
-// Generador de Código Único de Afiliado (Ejemplo: VYL-8F2A)
+// Generador de Código Único de Afiliado
 function generateAffiliateCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = 'VYL-';
@@ -83,6 +85,8 @@ function loadSavedLogo() {
     const savedLogo = localStorage.getItem('vylon_db_logo');
     if (savedLogo) {
         applyGlobalLogo(savedLogo);
+    } else {
+        applyGlobalLogo(DEFAULT_LOGO_SVG);
     }
 }
 
@@ -103,7 +107,7 @@ async function fetchBCVExchangeRate() {
             if (rateInput) rateInput.value = newRate;
 
             alert(`Tasa BCV actualizada exitosamente: Bs. ${newRate}`);
-            notifyTelegram(`💱 <b>TASA DE CAMBIO BCV ACTUALIZADA</b>\n\nNueva tasa: <b>Bs. ${newRate}</b> / USDT`);
+            notifyTelegram(`🚀 <b>TASA DE CAMBIO BCV ACTUALIZADA</b>\n\nNueva tasa: <b>Bs. ${newRate}</b> / USDT`);
             
             if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
             if (typeof renderPublicStore === 'function') renderPublicStore();
@@ -181,29 +185,34 @@ async function processTelegramLogoPhoto(token, fileId) {
 
         if (fileData.ok && fileData.result.file_path) {
             const filePath = fileData.result.file_path;
-            const downloadUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+            const directDownloadUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+            
+            // USO DE CORS PROXY PARA EVITAR EL BLOQUEO DEL NAVEGADOR EN GITHUB PAGES
+            const proxyDownloadUrl = `https://corsproxy.io/?${encodeURIComponent(directDownloadUrl)}`;
 
-            const imgRes = await fetch(downloadUrl);
+            const imgRes = await fetch(proxyDownloadUrl);
+            if (!imgRes.ok) throw new Error("Falló la descarga de la imagen vía Proxy CORS.");
+
             const blob = await imgRes.blob();
 
             const reader = new FileReader();
             reader.onloadend = function () {
                 const base64Image = reader.result;
                 applyGlobalLogo(base64Image);
-                notifyTelegram("✅ <b>¡LOGO ACTUALIZADO CON ÉXITO!</b>\n\nEl logo de la tienda y el icono de la pestaña (favicon) se han actualizado correctamente desde Telegram.");
+                notifyTelegram("✅ <b>¡LOGO ACTUALIZADO CON ÉXITO!</b>\n\nEl logo de la tienda y el icono de la pestaña (favicon) se han actualizado correctamente.");
                 if (typeof renderPublicStore === 'function') renderPublicStore();
             };
             reader.readAsDataURL(blob);
         }
     } catch (err) {
         console.error("Error al procesar la foto de Telegram:", err);
-        notifyTelegram("❌ <b>Error:</b> No se pudo descargar ni procesar la imagen del logo.");
+        notifyTelegram("❌ <b>Error:</b> No se pudo descargar ni procesar la imagen del logo debido a restricciones de red.");
     }
 }
 
 setInterval(checkTelegramUpdates, 6000);
 
-// LÓGICA MÓDULO DE AFILIADOS CON CÓDIGO ÚNICO ANÓNIMO
+// LÓGICA MÓDULO DE AFILIADOS
 function checkAffiliateSession() {
     const activeAlias = sessionStorage.getItem('vylon_affiliate_session');
     const authSection = document.getElementById('section-auth');
@@ -248,14 +257,7 @@ function handleAffiliateRegister(event) {
         code = generateAffiliateCode();
     }
 
-    const newAffiliate = {
-        id: Date.now(),
-        name,
-        alias,
-        email,
-        code,
-        password
-    };
+    const newAffiliate = { id: Date.now(), name, alias, email, code, password };
 
     affiliates.push(newAffiliate);
     localStorage.setItem('vylon_db_affiliates', JSON.stringify(affiliates));
@@ -288,8 +290,10 @@ function handleAffiliateLogout() {
 }
 
 function renderAffiliateDashboard(affiliate) {
-    document.getElementById('affiliate-name-display').innerText = affiliate.name;
-    document.getElementById('affiliate-alias-display').innerText = affiliate.alias;
+    const affNameDisplay = document.getElementById('affiliate-name-display');
+    const affAliasDisplay = document.getElementById('affiliate-alias-display');
+    if (affNameDisplay) affNameDisplay.innerText = affiliate.name;
+    if (affAliasDisplay) affAliasDisplay.innerText = affiliate.alias;
 
     if (!affiliate.code) {
         let affiliates = getAffiliates();
@@ -303,7 +307,8 @@ function renderAffiliateDashboard(affiliate) {
 
     const baseUrl = window.location.origin + window.location.pathname.replace('afiliado.html', 'index.html');
     const refLink = `${baseUrl}?ref=${affiliate.code}`;
-    document.getElementById('affiliate-referral-link').value = refLink;
+    const refInput = document.getElementById('affiliate-referral-link');
+    if (refInput) refInput.value = refLink;
 
     const orders = getOrders();
     const products = getProducts();
@@ -312,42 +317,48 @@ function renderAffiliateDashboard(affiliate) {
     const affOrders = orders.filter(o => o.affiliateRef === affiliate.code || o.affiliateAlias === affiliate.alias);
 
     let totalEarnedUSDT = 0;
-
     const tbody = document.getElementById('affiliate-orders-tbody');
-    tbody.innerHTML = '';
+    if (tbody) {
+        tbody.innerHTML = '';
+        affOrders.forEach(o => {
+            const prod = products.find(p => p.id === o.productId);
+            const commRate = prod ? prod.commissionUSDT : 0;
+            const totalComm = commRate * o.qty;
+            totalEarnedUSDT += totalComm;
 
-    affOrders.forEach(o => {
-        const prod = products.find(p => p.id === o.productId);
-        const commRate = prod ? prod.commissionUSDT : 0;
-        const totalComm = commRate * o.qty;
-        totalEarnedUSDT += totalComm;
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td class="p-3 font-mono font-bold">${o.id}</td>
-            <td class="p-3 text-gray-400">${o.date}</td>
-            <td class="p-3 font-bold text-white">${o.productName} (x${o.qty})</td>
-            <td class="p-3">$${o.priceUSDT.toFixed(2)}</td>
-            <td class="p-3 font-bold text-emerald-400">+$${totalComm.toFixed(2)} USDT</td>
-        `;
-        tbody.appendChild(tr);
-    });
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="p-3 font-mono font-bold">${o.id}</td>
+                <td class="p-3 text-gray-400">${o.date}</td>
+                <td class="p-3 font-bold text-white">${o.productName} (x${o.qty})</td>
+                <td class="p-3">$${o.priceUSDT.toFixed(2)}</td>
+                <td class="p-3 font-bold text-emerald-400">+$${totalComm.toFixed(2)} USDT</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
 
     const totalEarnedBs = totalEarnedUSDT * config.exchangeRate;
 
-    document.getElementById('aff-stat-sales').innerText = affOrders.length;
-    document.getElementById('aff-stat-earnings').innerText = `$${totalEarnedUSDT.toFixed(2)} USDT`;
-    document.getElementById('aff-stat-earnings-bs').innerText = `Bs. ${totalEarnedBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
+    const statSales = document.getElementById('aff-stat-sales');
+    const statEarnings = document.getElementById('aff-stat-earnings');
+    const statEarningsBs = document.getElementById('aff-stat-earnings-bs');
+
+    if (statSales) statSales.innerText = affOrders.length;
+    if (statEarnings) statEarnings.innerText = `$${totalEarnedUSDT.toFixed(2)} USDT`;
+    if (statEarningsBs) statEarningsBs.innerText = `Bs. ${totalEarnedBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
 }
 
 function copyReferralLink() {
     const input = document.getElementById('affiliate-referral-link');
-    input.select();
-    navigator.clipboard.writeText(input.value);
-    alert("¡Link de referido copiado al portapapeles!");
+    if (input) {
+        input.select();
+        navigator.clipboard.writeText(input.value);
+        alert("¡Link de referido copiado al portapapeles!");
+    }
 }
 
-// Comandos de Acceso Admin
+// CONTROL DE ACCESO ADMINISTRATIVO
 let logoClickCount = 0;
 let logoClickTimer = null;
 
@@ -385,7 +396,26 @@ function openAdminAuthModal() {
     }
 }
 
-// Tienda Pública
+function closeAdminAuthModal() {
+    const modal = document.getElementById('modal-admin-auth');
+    if (modal) modal.classList.add('hidden');
+}
+
+function handleAdminLogin(event) {
+    event.preventDefault();
+    const pinInput = document.getElementById('admin-pin-input');
+    if (!pinInput) return;
+
+    if (pinInput.value === ADMIN_PIN) {
+        sessionStorage.setItem('vylon_admin_auth', 'true');
+        window.location.href = 'admin.html';
+    } else {
+        alert("PIN Administrativo Incorrecto.");
+        pinInput.value = '';
+    }
+}
+
+// TIENDA PÚBLICA Y PROCESO DE COMPRA
 function renderPublicStore() {
     const grid = document.getElementById('public-grid');
     if (!grid) return;
@@ -405,7 +435,7 @@ function renderPublicStore() {
     const filtered = products.filter(p => p.name.toLowerCase().includes(query) || p.code.includes(query));
 
     if (filtered.length === 0) {
-        grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500 text-xs">No se encontraron productos.</div>`;
+        grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500 text-xs">No se encontraron productos en catálogo.</div>`;
         return;
     }
 
@@ -435,10 +465,107 @@ function renderPublicStore() {
     });
 }
 
-// -------------------------------------------------------------
-// FUNCIONES Y RENDERING DE PANEL DE ADMINISTRACIÓN (admin.html)
-// -------------------------------------------------------------
+function openBuyModal(productId, refCode) {
+    const products = getProducts();
+    const config = getConfig();
+    const prod = products.find(p => p.id === productId);
+    if (!prod) return;
 
+    document.getElementById('buy-product-id').value = prod.id;
+    document.getElementById('buy-affiliate-alias').value = refCode;
+    document.getElementById('buy-client-qty').value = 1;
+
+    document.getElementById('pm-info-bank').innerText = config.pmBank;
+    document.getElementById('pm-info-phone').innerText = config.pmPhone;
+    document.getElementById('pm-info-ci').innerText = config.pmCi;
+
+    const detailsDiv = document.getElementById('buy-product-details');
+    detailsDiv.innerHTML = `
+        <div class="font-bold text-white">${prod.name}</div>
+        <div class="text-gray-400">Precio Unitario: <span class="text-vylon-gold font-bold">$${prod.priceUSDT.toFixed(2)} USDT</span></div>
+    `;
+
+    calculateOrderTotal();
+    document.getElementById('modal-buy').classList.remove('hidden');
+}
+
+function closeBuyModal() {
+    document.getElementById('modal-buy').classList.add('hidden');
+}
+
+function calculateOrderTotal() {
+    const productId = parseInt(document.getElementById('buy-product-id').value);
+    const qty = parseInt(document.getElementById('buy-client-qty').value) || 1;
+    const products = getProducts();
+    const config = getConfig();
+
+    const prod = products.find(p => p.id === productId);
+    if (!prod) return;
+
+    const totalUSDT = prod.priceUSDT * qty;
+    const totalBs = totalUSDT * config.exchangeRate;
+
+    document.getElementById('buy-total-calculated').innerText = `$${totalUSDT.toFixed(2)} USDT (Bs. ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })})`;
+}
+
+function submitCustomerOrder(event) {
+    event.preventDefault();
+    const productId = parseInt(document.getElementById('buy-product-id').value);
+    const refCode = document.getElementById('buy-affiliate-alias').value;
+    const clientName = document.getElementById('buy-client-name').value.trim();
+    const clientEmail = document.getElementById('buy-client-email').value.trim();
+    const qty = parseInt(document.getElementById('buy-client-qty').value);
+
+    let products = getProducts();
+    let orders = getOrders();
+    const config = getConfig();
+
+    const prodIndex = products.findIndex(p => p.id === productId);
+    if (prodIndex === -1) return;
+
+    const prod = products[prodIndex];
+    if (prod.stock < qty) {
+        alert("La cantidad requerida supera el inventario disponible.");
+        return;
+    }
+
+    // Descontar inventario
+    products[prodIndex].stock -= qty;
+    products[prodIndex].sales = (products[prodIndex].sales || 0) + qty;
+    localStorage.setItem('vylon_db_products', JSON.stringify(products));
+
+    const totalUSDT = prod.priceUSDT * qty;
+    const totalBs = totalUSDT * config.exchangeRate;
+    const orderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
+
+    const newOrder = {
+        id: orderId,
+        date: new Date().toLocaleDateString('es-VE') + ' ' + new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
+        productId: prod.id,
+        productName: prod.name,
+        qty: qty,
+        priceUSDT: prod.priceUSDT,
+        totalUSDT: totalUSDT,
+        clientName: clientName,
+        clientEmail: clientEmail,
+        affiliateRef: refCode
+    };
+
+    orders.unshift(newOrder);
+    localStorage.setItem('vylon_db_orders', JSON.stringify(orders));
+
+    notifyTelegram(`🛒 <b>NUEVO PEDIDO REGISTRADO (${orderId})</b>\n\n<b>Cliente:</b> ${clientName}\n<b>Producto:</b> ${prod.name} (x${qty})\n<b>Total:</b> $${totalUSDT.toFixed(2)} USDT / Bs. ${totalBs.toFixed(2)}\n<b>Referido:</b> ${refCode || 'Directo'}`);
+
+    alert(`¡Pedido ${orderId} registrado exitosamente! Serás redirigido para coordinar el pago.`);
+    closeBuyModal();
+    renderPublicStore();
+
+    // Redirigir a WhatsApp
+    const msg = `Hola Vylon, acabo de hacer un pedido de ${qty}x ${prod.name} por un total de $${totalUSDT.toFixed(2)} USDT (Bs. ${totalBs.toFixed(2)}). Mi nombre es ${clientName}. ID de Orden: ${orderId}`;
+    window.open(`https://wa.me/584129830982?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// RENDERING DE PANEL DE ADMINISTRACIÓN (admin.html)
 function switchAdminTab(tabName) {
     const tabs = ['inventory', 'orders', 'affiliates', 'config'];
     tabs.forEach(t => {
@@ -466,7 +593,6 @@ function renderAdminDashboard() {
     const affiliates = getAffiliates();
     const config = getConfig();
 
-    // 1. Estadísticas Globales
     let totalSalesCount = orders.length;
     let totalUSDT = orders.reduce((acc, o) => acc + (o.totalUSDT || 0), 0);
     let totalBs = totalUSDT * config.exchangeRate;
@@ -557,7 +683,7 @@ function renderAdminDashboard() {
         });
     }
 
-    // 5. Cargar Configuración en Formulario
+    // 5. Cargar Configuración
     const sloganInput = document.getElementById('cfg-slogan');
     const rateInput = document.getElementById('cfg-exchange-rate');
     const ciInput = document.getElementById('cfg-pm-ci');
@@ -575,7 +701,7 @@ function renderAdminDashboard() {
     if (chatInput) chatInput.value = config.telegramChatId || '';
 }
 
-// Modal de Crear / Editar Producto
+// Modales Inventario Admin
 function openAddProductModal() {
     document.getElementById('edit-prod-id').value = '';
     document.getElementById('edit-prod-name').value = '';
@@ -687,7 +813,7 @@ function exportStockJSON() {
     a.click();
 }
 
-// Carga Inicial
+// Carga Inicial General
 document.addEventListener('DOMContentLoaded', () => {
     loadSavedLogo();
     if (document.getElementById('public-grid')) {
