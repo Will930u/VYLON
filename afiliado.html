@@ -13,10 +13,8 @@
 <body class="bg-slate-900 text-gray-100 font-sans min-h-screen flex flex-col justify-between p-4 md:p-8">
 
     <div class="max-w-4xl mx-auto w-full space-y-6">
-        <!-- Header con Logo Dinámico -->
         <header class="bg-slate-950 p-6 rounded-2xl border border-slate-800 flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <!-- LOGO DINÁMICO: Detectado por app.js -->
                 <img src="logo.png" alt="Vylon Afiliados" class="vylon-logo-img w-10 h-10 rounded-xl object-cover border border-slate-700 shadow-md">
                 <div>
                     <h1 class="text-xl font-bold text-white">Programa de Afiliados Vylon</h1>
@@ -29,18 +27,16 @@
             </a>
         </header>
 
-        <!-- Formulario de Acceso / Registro -->
         <div id="section-auth" class="bg-slate-950/80 border border-slate-800 rounded-2xl p-6 md:p-8 max-w-md mx-auto shadow-2xl">
             <div class="flex border-b border-slate-800 mb-6">
                 <button onclick="switchAuthTab('login')" id="btn-tab-login" class="w-1/2 py-2 text-center font-bold text-xs border-b-2 border-blue-500 text-blue-400">Iniciar Sesión</button>
                 <button onclick="switchAuthTab('register')" id="btn-tab-register" class="w-1/2 py-2 text-center font-bold text-xs border-b-2 border-transparent text-gray-500 hover:text-gray-300">Registrarse</button>
             </div>
 
-            <!-- Iniciar Sesión -->
             <form id="form-login" onsubmit="handleAffiliateLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Alias (Usuario) o Correo</label>
-                    <input type="text" id="login-identifier" required placeholder="utrera930@gmail.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:border-blue-500 outline-none">
+                    <input type="text" id="login-identifier" required placeholder="tu_alias o correo@ejemplo.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white focus:border-blue-500 outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Contraseña</label>
@@ -51,7 +47,6 @@
                 </button>
             </form>
 
-            <!-- Registro -->
             <form id="form-register" onsubmit="handleAffiliateRegister(event)" class="space-y-4 hidden">
                 <div>
                     <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nombre Completo</label>
@@ -75,7 +70,6 @@
             </form>
         </div>
 
-        <!-- Dashboard del Afiliado -->
         <div id="section-dashboard" class="hidden space-y-6">
             <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 flex justify-between items-center">
                 <div>
@@ -87,7 +81,6 @@
                 </button>
             </div>
 
-            <!-- Link Referido -->
             <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-2">
                 <label class="block text-xs font-bold text-gray-400 uppercase">Tu Link de Referido</label>
                 <div class="flex gap-2">
@@ -99,7 +92,6 @@
                 </div>
             </div>
 
-            <!-- Métricas -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800">
                     <p class="text-xs text-gray-400 font-bold uppercase">Ventas Referidas</p>
@@ -115,7 +107,6 @@
                 </div>
             </div>
 
-            <!-- Histórico -->
             <div class="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden">
                 <div class="p-4 border-b border-slate-800 font-bold text-xs text-gray-400 uppercase">
                     Histórico de Pedidos Referidos
@@ -135,10 +126,32 @@
                     </table>
                 </div>
             </div>
+
+            <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-4">
+                <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-headset text-amber-400"></i> Solicitar Cambio de Datos / Contacto al Admin
+                    </h3>
+                    <p class="text-xs text-gray-400">Si deseas modificar tu nombre, correo, teléfono de pago o consultar sobre tus comisiones, envía un mensaje directo al administrador.</p>
+                </div>
+                <form onsubmit="sendAffiliateSupportMessage(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Asunto de la Solicitud</label>
+                        <input type="text" id="supp-subject" required placeholder="Ej. Cambio de correo electrónico / Consulta de Retiro" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Descripción del mensaje / Datos a modificar</label>
+                        <textarea id="supp-message" rows="3" required placeholder="Escribe detalladamente los datos que deseas actualizar..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-500"></textarea>
+                    </div>
+                    <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs px-5 py-3 rounded-xl transition flex items-center gap-2">
+                        <i class="fa-paper-plane fa-solid"></i>
+                        <span>Enviar Solicitud al Administrador</span>
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
-    <!-- Script principal de lógica de la app -->
     <script src="app.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
