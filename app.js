@@ -1,15 +1,7 @@
-// Configuración global e inicialización
+// Configuración Global y Valores Iniciales
 const DEFAULT_EXCHANGE_RATE = 78.50;
 const ADMIN_PIN = "1234";
 const DOLAR_API_URL = "https://ve.dolarapi.com/v1/dolares/oficial";
-
-const EMAILJS_PUBLIC_KEY = "TU_PUBLIC_KEY";
-const EMAILJS_SERVICE_ID = "TU_SERVICE_ID";
-const EMAILJS_TEMPLATE_ID = "TU_TEMPLATE_ID";
-
-if (window.emailjs && EMAILJS_PUBLIC_KEY !== "TU_PUBLIC_KEY") {
-    emailjs.init(EMAILJS_PUBLIC_KEY);
-}
 
 const INITIAL_PRODUCTS = [
     { id: 1, name: "Bicarbonato de Sodio BicarBix 150g", code: "7599063000063", priceUSDT: 2.00, stock: 98, damaged: 0, sales: 6, commissionUSDT: 0.50 },
@@ -30,6 +22,7 @@ const DEFAULT_CONFIG = {
     telegramChatId: ""
 };
 
+// Inicialización de la Base de Datos Local
 function initDB() {
     if (!localStorage.getItem('vylon_db_products')) {
         localStorage.setItem('vylon_db_products', JSON.stringify(INITIAL_PRODUCTS));
@@ -100,7 +93,135 @@ async function notifyTelegram(message) {
     }
 }
 
-// Comandos de Acceso Admin (Atajo de Teclado y Clics)
+// LÓGICA MÓDULO DE AFILIADOS
+function checkAffiliateSession() {
+    const activeAlias = sessionStorage.getItem('vylon_affiliate_session');
+    const authSection = document.getElementById('section-auth');
+    const dashSection = document.getElementById('section-dashboard');
+
+    if (!authSection || !dashSection) return;
+
+    if (activeAlias) {
+        const affiliates = getAffiliates();
+        const aff = affiliates.find(a => a.alias === activeAlias);
+        if (aff) {
+            authSection.classList.add('hidden');
+            dashSection.classList.remove('hidden');
+            renderAffiliateDashboard(aff);
+        } else {
+            sessionStorage.removeItem('vylon_affiliate_session');
+            authSection.classList.remove('hidden');
+            dashSection.classList.add('hidden');
+        }
+    } else {
+        authSection.classList.remove('hidden');
+        dashSection.classList.add('hidden');
+    }
+}
+
+function handleAffiliateRegister(event) {
+    event.preventDefault();
+    const name = document.getElementById('reg-name').value.trim();
+    const alias = document.getElementById('reg-alias').value.trim().toLowerCase().replace(/\s+/g, '');
+    const email = document.getElementById('reg-email').value.trim().toLowerCase();
+    const password = document.getElementById('reg-password').value;
+
+    let affiliates = getAffiliates();
+
+    if (affiliates.some(a => a.alias === alias || a.email === email)) {
+        alert("El alias o el correo ya se encuentran registrados.");
+        return;
+    }
+
+    const newAffiliate = {
+        id: Date.now(),
+        name,
+        alias,
+        email,
+        password
+    };
+
+    affiliates.push(newAffiliate);
+    localStorage.setItem('vylon_db_affiliates', JSON.stringify(affiliates));
+
+    sessionStorage.setItem('vylon_affiliate_session', alias);
+    notifyTelegram(`👤 <b>NUEVO AFILIADO REGISTRADO</b>\n\n<b>Nombre:</b> ${name}\n<b>Alias:</b> ${alias}\n<b>Correo:</b> ${email}`);
+
+    checkAffiliateSession();
+}
+
+function handleAffiliateLogin(event) {
+    event.preventDefault();
+    const identifier = document.getElementById('login-identifier').value.trim().toLowerCase();
+    const password = document.getElementById('login-password').value;
+
+    const affiliates = getAffiliates();
+    const aff = affiliates.find(a => (a.alias === identifier || a.email === identifier) && a.password === password);
+
+    if (aff) {
+        sessionStorage.setItem('vylon_affiliate_session', aff.alias);
+        checkAffiliateSession();
+    } else {
+        alert("Credenciales incorrectas. Verifique usuario y contraseña.");
+    }
+}
+
+function handleAffiliateLogout() {
+    sessionStorage.removeItem('vylon_affiliate_session');
+    checkAffiliateSession();
+}
+
+function renderAffiliateDashboard(affiliate) {
+    document.getElementById('affiliate-name-display').innerText = affiliate.name;
+    document.getElementById('affiliate-alias-display').innerText = affiliate.alias;
+
+    const baseUrl = window.location.origin + window.location.pathname.replace('afiliado.html', 'index.html');
+    const refLink = `${baseUrl}?ref=${affiliate.alias}`;
+    document.getElementById('affiliate-referral-link').value = refLink;
+
+    const orders = getOrders();
+    const products = getProducts();
+    const config = getConfig();
+
+    const affOrders = orders.filter(o => o.affiliateAlias === affiliate.alias);
+
+    let totalEarnedUSDT = 0;
+
+    const tbody = document.getElementById('affiliate-orders-tbody');
+    tbody.innerHTML = '';
+
+    affOrders.forEach(o => {
+        const prod = products.find(p => p.id === o.productId);
+        const commRate = prod ? prod.commissionUSDT : 0;
+        const totalComm = commRate * o.qty;
+        totalEarnedUSDT += totalComm;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="p-3 font-mono font-bold">${o.id}</td>
+            <td class="p-3 text-gray-400">${o.date}</td>
+            <td class="p-3 font-bold text-white">${o.productName} (x${o.qty})</td>
+            <td class="p-3">$${o.priceUSDT.toFixed(2)}</td>
+            <td class="p-3 font-bold text-emerald-400">+$${totalComm.toFixed(2)} USDT</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    const totalEarnedBs = totalEarnedUSDT * config.exchangeRate;
+
+    document.getElementById('aff-stat-sales').innerText = affOrders.length;
+    document.getElementById('aff-stat-earnings').innerText = `$${totalEarnedUSDT.toFixed(2)} USDT`;
+    document.getElementById('aff-stat-earnings-bs').innerText = `Bs. ${totalEarnedBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
+}
+
+function copyReferralLink() {
+    const input = document.getElementById('affiliate-referral-link');
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    alert("¡Link de referido copiado al portapapeles!");
+}
+
+// Comandos de Acceso Admin
 let logoClickCount = 0;
 let logoClickTimer = null;
 
@@ -135,24 +256,6 @@ function openAdminAuthModal() {
         } else if (pin) {
             alert("PIN incorrecto.");
         }
-    }
-}
-
-function closeAdminAuthModal() {
-    const modal = document.getElementById('modal-admin-auth');
-    if (modal) modal.classList.add('hidden');
-}
-
-function handleAdminLogin(event) {
-    event.preventDefault();
-    const pin = document.getElementById('admin-pin-input').value;
-    if (pin === ADMIN_PIN) {
-        sessionStorage.setItem('vylon_admin_auth', 'true');
-        closeAdminAuthModal();
-        window.location.href = 'admin.html';
-    } else {
-        notifyTelegram(`🚨 <b>ALERTA SEGURIDAD VYLON</b>\n\nIntento fallido de acceso al Panel Administrativo.`);
-        alert("Clave de acceso incorrecta.");
     }
 }
 
@@ -204,321 +307,6 @@ function renderPublicStore() {
         `;
         grid.appendChild(card);
     });
-}
-
-function openBuyModal(productId, refAlias = '') {
-    const products = getProducts();
-    const config = getConfig();
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-
-    document.getElementById('buy-product-id').value = product.id;
-    document.getElementById('buy-affiliate-alias').value = refAlias;
-    document.getElementById('buy-client-qty').value = 1;
-
-    document.getElementById('pm-info-bank').innerText = config.pmBank;
-    document.getElementById('pm-info-phone').innerText = config.pmPhone;
-    document.getElementById('pm-info-ci').innerText = config.pmCi;
-
-    const details = document.getElementById('buy-product-details');
-    details.innerHTML = `
-        <p class="font-bold text-white">${product.name}</p>
-        <p class="text-gray-400">Precio Unitario: <span class="text-vylon-gold">${product.priceUSDT.toFixed(2)} USDT</span></p>
-    `;
-
-    calculateOrderTotal();
-    document.getElementById('modal-buy').classList.remove('hidden');
-}
-
-function closeBuyModal() {
-    document.getElementById('modal-buy').classList.add('hidden');
-}
-
-function calculateOrderTotal() {
-    const products = getProducts();
-    const productId = parseInt(document.getElementById('buy-product-id').value);
-    const qty = parseInt(document.getElementById('buy-client-qty').value) || 1;
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-
-    const total = product.priceUSDT * qty;
-    document.getElementById('buy-total-calculated').innerText = `${total.toFixed(2)} USDT`;
-}
-
-function submitCustomerOrder(event) {
-    event.preventDefault();
-    const productId = parseInt(document.getElementById('buy-product-id').value);
-    const affiliateAlias = document.getElementById('buy-affiliate-alias').value || 'Directo';
-    const clientName = document.getElementById('buy-client-name').value;
-    const clientEmail = document.getElementById('buy-client-email').value;
-    const qty = parseInt(document.getElementById('buy-client-qty').value);
-
-    const products = getProducts();
-    const productIndex = products.findIndex(p => p.id === productId);
-    if (productIndex === -1) return;
-
-    const product = products[productIndex];
-    if (product.stock < qty) {
-        alert("Sin inventario suficiente.");
-        return;
-    }
-
-    products[productIndex].stock -= qty;
-    products[productIndex].sales = (products[productIndex].sales || 0) + qty;
-    localStorage.setItem('vylon_db_products', JSON.stringify(products));
-
-    const orders = getOrders();
-    const newOrder = {
-        id: "ORD-" + Math.floor(100 + Math.random() * 900),
-        date: new Date().toLocaleString('es-VE'),
-        productId: product.id,
-        productName: product.name,
-        qty: qty,
-        priceUSDT: product.priceUSDT * qty,
-        affiliateAlias: affiliateAlias,
-        clientName: clientName,
-        clientEmail: clientEmail
-    };
-    orders.push(newOrder);
-    localStorage.setItem('vylon_db_orders', JSON.stringify(orders));
-
-    const config = getConfig();
-    const totalBs = (newOrder.priceUSDT * config.exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2 });
-
-    notifyTelegram(`🛒 <b>NUEVA VENTA REGISTRADA</b>\n\n<b>ID:</b> ${newOrder.id}\n<b>Producto:</b> ${product.name} (x${qty})\n<b>Cliente:</b> ${clientName}\n<b>Monto:</b> $${newOrder.priceUSDT.toFixed(2)} USDT (Bs. ${totalBs})\n<b>Afiliado:</b> ${affiliateAlias}`);
-
-    if (products[productIndex].stock <= 5) {
-        notifyTelegram(`⚠️ <b>ALERTA CRÍTICA DE STOCK</b>\n\nProducto <b>${product.name}</b> con stock crítico: <b>${products[productIndex].stock}</b> unidades restantes.`);
-    }
-
-    closeBuyModal();
-    renderPublicStore();
-
-    const message = `Hola VYLON, he realizado el pedido ${newOrder.id}:\n*Producto:* ${product.name} (x${qty})\n*Total:* ${newOrder.priceUSDT.toFixed(2)} USDT (Bs. ${totalBs})\nAdjunto pago.`;
-    window.open(`https://wa.me/584129830982?text=${encodeURIComponent(message)}`, '_blank');
-}
-
-// Panel Admin
-function switchAdminTab(tabId) {
-    document.querySelectorAll('.admin-tab-content').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
-        btn.className = "admin-tab-btn bg-slate-800 text-gray-300 text-xs px-4 py-2 rounded-lg font-bold hover:bg-slate-700";
-    });
-
-    const targetContent = document.getElementById(tabId);
-    const targetBtn = document.getElementById('btn-' + tabId);
-    if (targetContent) targetContent.classList.remove('hidden');
-    if (targetBtn) targetBtn.className = "admin-tab-btn bg-blue-600 text-white text-xs px-4 py-2 rounded-lg font-bold";
-}
-
-let chartInstance = null;
-function renderAdminDashboard() {
-    const products = getProducts();
-    const orders = getOrders();
-    const config = getConfig();
-
-    if (document.getElementById('stat-total-products')) document.getElementById('stat-total-products').innerText = products.length;
-    const totalStock = products.reduce((acc, p) => acc + p.stock, 0);
-    if (document.getElementById('stat-total-stock')) document.getElementById('stat-total-stock').innerText = totalStock;
-
-    if (document.getElementById('stat-total-orders')) document.getElementById('stat-total-orders').innerText = orders.length;
-    const totalRev = orders.reduce((acc, o) => acc + o.priceUSDT, 0);
-    if (document.getElementById('stat-total-revenue')) document.getElementById('stat-total-revenue').innerText = `$${totalRev.toFixed(2)} USDT`;
-
-    const ctx = document.getElementById('chartStockOverview')?.getContext('2d');
-    if (ctx) {
-        if (chartInstance) chartInstance.destroy();
-        chartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: products.map(p => p.name.substring(0, 15) + '...'),
-                datasets: [{
-                    label: 'Stock',
-                    data: products.map(p => p.stock),
-                    backgroundColor: products.map(p => p.stock < 10 ? '#ef4444' : '#3b82f6')
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { ticks: { color: '#94a3b8', font: { size: 10 } } },
-                    y: { ticks: { color: '#94a3b8', font: { size: 10 } } }
-                }
-            }
-        });
-    }
-
-    const prodTable = document.getElementById('admin-products-table-body');
-    if (prodTable) {
-        prodTable.innerHTML = '';
-        products.forEach(p => {
-            const priceBs = (p.priceUSDT * config.exchangeRate).toFixed(2);
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="p-3 font-mono">${p.code}</td>
-                <td class="p-3 font-bold text-white">${p.name}</td>
-                <td class="p-3">$${p.priceUSDT.toFixed(2)}</td>
-                <td class="p-3">Bs. ${priceBs}</td>
-                <td class="p-3 font-bold ${p.stock < 10 ? 'text-red-400' : 'text-green-400'}">${p.stock}</td>
-                <td class="p-3 text-right space-x-1">
-                    <button onclick="editProductModal(${p.id})" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded text-[10px]">Editar</button>
-                    <button onclick="deleteProduct(${p.id})" class="bg-red-900/50 hover:bg-red-800 text-red-200 px-2 py-1 rounded text-[10px]">Borrar</button>
-                </td>
-            `;
-            prodTable.appendChild(tr);
-        });
-    }
-
-    const orderTable = document.getElementById('admin-orders-table-body');
-    if (orderTable) {
-        orderTable.innerHTML = '';
-        orders.forEach(o => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="p-3 font-mono font-bold">${o.id}</td>
-                <td class="p-3 text-gray-400">${o.date}</td>
-                <td class="p-3 font-bold text-white">${o.clientName}</td>
-                <td class="p-3">${o.productName}</td>
-                <td class="p-3 font-bold">${o.qty}</td>
-                <td class="p-3 text-yellow-400 font-bold">$${o.priceUSDT.toFixed(2)}</td>
-                <td class="p-3"><span class="bg-slate-800 px-2 py-0.5 rounded text-[10px] font-mono text-blue-400">${o.affiliateAlias}</span></td>
-            `;
-            orderTable.appendChild(tr);
-        });
-    }
-
-    if (document.getElementById('cfg-slogan')) document.getElementById('cfg-slogan').value = config.slogan;
-    if (document.getElementById('cfg-exchange-rate')) document.getElementById('cfg-exchange-rate').value = config.exchangeRate;
-    if (document.getElementById('cfg-pm-bank')) document.getElementById('cfg-pm-bank').value = config.pmBank;
-    if (document.getElementById('cfg-pm-phone')) document.getElementById('cfg-pm-phone').value = config.pmPhone;
-    if (document.getElementById('cfg-pm-ci')) document.getElementById('cfg-pm-ci').value = config.pmCi;
-    if (document.getElementById('cfg-telegram-token')) document.getElementById('cfg-telegram-token').value = config.telegramToken || '';
-    if (document.getElementById('cfg-telegram-chatid')) document.getElementById('cfg-telegram-chatid').value = config.telegramChatId || '';
-}
-
-function openNewProductModal() {
-    document.getElementById('edit-prod-id').value = '';
-    document.getElementById('edit-prod-name').value = '';
-    document.getElementById('edit-prod-code').value = '7599' + Math.floor(1000000 + Math.random() * 9000000);
-    document.getElementById('edit-prod-price').value = '';
-    document.getElementById('edit-prod-stock').value = '';
-    document.getElementById('edit-prod-comm').value = '';
-    document.getElementById('modal-product-title').innerText = "Añadir Producto";
-    document.getElementById('modal-product-edit').classList.remove('hidden');
-}
-
-function editProductModal(id) {
-    const products = getProducts();
-    const prod = products.find(p => p.id === id);
-    if (!prod) return;
-
-    document.getElementById('edit-prod-id').value = prod.id;
-    document.getElementById('edit-prod-name').value = prod.name;
-    document.getElementById('edit-prod-code').value = prod.code;
-    document.getElementById('edit-prod-price').value = prod.priceUSDT;
-    document.getElementById('edit-prod-stock').value = prod.stock;
-    document.getElementById('edit-prod-comm').value = prod.commissionUSDT;
-    document.getElementById('modal-product-title').innerText = "Editar Producto";
-    document.getElementById('modal-product-edit').classList.remove('hidden');
-}
-
-function closeProductModal() {
-    document.getElementById('modal-product-edit').classList.add('hidden');
-}
-
-function saveProductForm(event) {
-    event.preventDefault();
-    const id = document.getElementById('edit-prod-id').value;
-    const name = document.getElementById('edit-prod-name').value;
-    const code = document.getElementById('edit-prod-code').value;
-    const priceUSDT = parseFloat(document.getElementById('edit-prod-price').value);
-    const stock = parseInt(document.getElementById('edit-prod-stock').value);
-    const commissionUSDT = parseFloat(document.getElementById('edit-prod-comm').value);
-
-    let products = getProducts();
-
-    if (id) {
-        const idx = products.findIndex(p => p.id === parseInt(id));
-        if (idx !== -1) {
-            products[idx] = { ...products[idx], name, code, priceUSDT, stock, commissionUSDT };
-            notifyTelegram(`📦 <b>PRODUCTO ACTUALIZADO</b>\n\n<b>Nombre:</b> ${name}\n<b>Stock:</b> ${stock}`);
-        }
-    } else {
-        products.push({
-            id: Date.now(),
-            name, code, priceUSDT, stock, damaged: 0, sales: 0, commissionUSDT
-        });
-        notifyTelegram(`✨ <b>NUEVO PRODUCTO</b>\n\n<b>Nombre:</b> ${name}\n<b>Precio:</b> $${priceUSDT} USDT`);
-    }
-
-    localStorage.setItem('vylon_db_products', JSON.stringify(products));
-    closeProductModal();
-    renderAdminDashboard();
-}
-
-function deleteProduct(id) {
-    let products = getProducts();
-    const prod = products.find(p => p.id === id);
-
-    if (confirm("¿Estás seguro de eliminar este producto?")) {
-        products = products.filter(p => p.id !== id);
-        localStorage.setItem('vylon_db_products', JSON.stringify(products));
-        if (prod) {
-            notifyTelegram(`🗑️ <b>PRODUCTO ELIMINADO</b>\n\nProducto: <b>${prod.name}</b>`);
-        }
-        renderAdminDashboard();
-    }
-}
-
-function saveAdminConfig(event) {
-    event.preventDefault();
-    const slogan = document.getElementById('cfg-slogan').value;
-    const exchangeRate = parseFloat(document.getElementById('cfg-exchange-rate').value);
-    const pmBank = document.getElementById('cfg-pm-bank').value;
-    const pmPhone = document.getElementById('cfg-pm-phone').value;
-    const pmCi = document.getElementById('cfg-pm-ci').value;
-    const telegramToken = document.getElementById('cfg-telegram-token').value.trim();
-    const telegramChatId = document.getElementById('cfg-telegram-chatid').value.trim();
-
-    const config = { slogan, exchangeRate, pmBank, pmPhone, pmCi, telegramToken, telegramChatId };
-    localStorage.setItem('vylon_db_config', JSON.stringify(config));
-    
-    alert("Configuración guardada exitosamente.");
-    notifyTelegram(`⚙️ <b>CONFIGURACIÓN ACTUALIZADA</b>\n\n<b>Tasa:</b> Bs. ${exchangeRate}`);
-    renderAdminDashboard();
-}
-
-function exportStockJSON() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
-        products: getProducts(),
-        orders: getOrders(),
-        affiliates: getAffiliates(),
-        config: getConfig()
-    }));
-    const anchor = document.createElement('a');
-    anchor.setAttribute("href", dataStr);
-    anchor.setAttribute("download", "vylon_full_backup.json");
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-}
-
-function importStockJSON() {
-    const input = prompt("Pega aquí el contenido del archivo JSON:");
-    if (input) {
-        try {
-            const data = JSON.parse(input);
-            if (data.products) localStorage.setItem('vylon_db_products', JSON.stringify(data.products));
-            if (data.orders) localStorage.setItem('vylon_db_orders', JSON.stringify(data.orders));
-            if (data.affiliates) localStorage.setItem('vylon_db_affiliates', JSON.stringify(data.affiliates));
-            if (data.config) localStorage.setItem('vylon_db_config', JSON.stringify(data.config));
-            alert("Respaldo restaurado.");
-            renderAdminDashboard();
-        } catch(e) {
-            alert("Error al procesar el JSON.");
-        }
-    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
