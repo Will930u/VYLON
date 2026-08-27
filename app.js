@@ -47,6 +47,10 @@ function getOrders() { return JSON.parse(localStorage.getItem('vylon_db_orders')
 function getAffiliates() { return JSON.parse(localStorage.getItem('vylon_db_affiliates') || '[]'); }
 function getConfig() { return JSON.parse(localStorage.getItem('vylon_db_config') || JSON.stringify(DEFAULT_CONFIG)); }
 
+function saveProducts(products) { localStorage.setItem('vylon_db_products', JSON.stringify(products)); }
+function saveOrders(orders) { localStorage.setItem('vylon_db_orders', JSON.stringify(orders)); }
+function saveAffiliates(affiliates) { localStorage.setItem('vylon_db_affiliates', JSON.stringify(affiliates)); }
+
 // Generador de Código Único de Afiliado
 function generateAffiliateCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -60,17 +64,11 @@ function generateAffiliateCode() {
 // GESTIÓN DINÁMICA DE LOGO Y FAVICON EN PESTAÑA
 function applyGlobalLogo(logoBase64) {
     if (!logoBase64) return;
-    
-    // Guardar en LocalStorage
     localStorage.setItem('vylon_db_logo', logoBase64);
 
-    // 1. Actualizar imágenes de logo en el DOM
     const logoImgs = document.querySelectorAll('.vylon-logo-img');
-    logoImgs.forEach(img => {
-        img.src = logoBase64;
-    });
+    logoImgs.forEach(img => { img.src = logoBase64; });
 
-    // 2. Actualizar o crear Favicon en la pestaña (<head>)
     let faviconLink = document.querySelector("link[rel*='icon']");
     if (!faviconLink) {
         faviconLink = document.createElement('link');
@@ -80,7 +78,6 @@ function applyGlobalLogo(logoBase64) {
     faviconLink.href = logoBase64;
 }
 
-// Cargar Logo Guardado al Iniciar la Página
 function loadSavedLogo() {
     const savedLogo = localStorage.getItem('vylon_db_logo');
     if (savedLogo) {
@@ -107,8 +104,7 @@ async function fetchBCVExchangeRate() {
             if (rateInput) rateInput.value = newRate;
 
             alert(`Tasa BCV actualizada exitosamente: Bs. ${newRate}`);
-            notifyTelegram(`🚀 <b>TASA DE CAMBIO BCV ACTUALIZADA</b>\n\nNueva tasa: <b>Bs. ${newRate}</b> / USDT`);
-            
+            notifyTelegram(`💱 <b>TASA DE CAMBIO BCV ACTUALIZADA</b>\n\nNueva tasa: <b>Bs. ${newRate}</b> / USDT`);
             if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
             if (typeof renderPublicStore === 'function') renderPublicStore();
         }
@@ -122,43 +118,32 @@ async function fetchBCVExchangeRate() {
 async function notifyTelegram(message) {
     const config = getConfig();
     if (!config.telegramToken || !config.telegramChatId) return;
-
     const url = `https://api.telegram.org/bot${config.telegramToken}/sendMessage`;
     try {
         await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: config.telegramChatId,
-                text: message,
-                parse_mode: 'HTML'
-            })
+            body: JSON.stringify({ chat_id: config.telegramChatId, text: message, parse_mode: 'HTML' })
         });
     } catch (error) {
         console.error("Error Telegram:", error);
     }
 }
 
-// TELEGRAM POLLING: ESCUCHAR COMANDO /logo Y FOTO ADJUNTA
 async function checkTelegramUpdates() {
     const config = getConfig();
     if (!config.telegramToken) return;
-
     const offset = (config.lastTelegramUpdateId || 0) + 1;
     const url = `https://api.telegram.org/bot${config.telegramToken}/getUpdates?offset=${offset}&timeout=5`;
-
     try {
         const response = await fetch(url);
         const data = await response.json();
-
         if (data.ok && data.result.length > 0) {
             for (const update of data.result) {
                 config.lastTelegramUpdateId = update.update_id;
                 localStorage.setItem('vylon_db_config', JSON.stringify(config));
-
                 const message = update.message;
                 if (!message) continue;
-
                 const caption = message.caption || "";
                 const text = message.text || "";
 
@@ -182,607 +167,437 @@ async function processTelegramLogoPhoto(token, fileId) {
         const getFileUrl = `https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`;
         const resFile = await fetch(getFileUrl);
         const fileData = await resFile.json();
-
         if (fileData.ok && fileData.result.file_path) {
             const filePath = fileData.result.file_path;
             const directDownloadUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
-            
-            // USO DE CORS PROXY PARA EVITAR EL BLOQUEO DEL NAVEGADOR EN GITHUB PAGES
             const proxyDownloadUrl = `https://corsproxy.io/?${encodeURIComponent(directDownloadUrl)}`;
 
             const imgRes = await fetch(proxyDownloadUrl);
-            if (!imgRes.ok) throw new Error("Falló la descarga de la imagen vía Proxy CORS.");
-
             const blob = await imgRes.blob();
-
             const reader = new FileReader();
-            reader.onloadend = function () {
-                const base64Image = reader.result;
-                applyGlobalLogo(base64Image);
-                notifyTelegram("✅ <b>¡LOGO ACTUALIZADO CON ÉXITO!</b>\n\nEl logo de la tienda y el icono de la pestaña (favicon) se han actualizado correctamente.");
-                if (typeof renderPublicStore === 'function') renderPublicStore();
+            reader.onloadend = () => {
+                const base64data = reader.result;
+                applyGlobalLogo(base64data);
+                notifyTelegram("✅ <b>¡Logo de Vylon actualizado exitosamente en toda la plataforma!</b>");
             };
             reader.readAsDataURL(blob);
         }
     } catch (err) {
-        console.error("Error al procesar la foto de Telegram:", err);
-        notifyTelegram("❌ <b>Error:</b> No se pudo descargar ni procesar la imagen del logo debido a restricciones de red.");
+        console.error("Error procesando imagen de Telegram:", err);
+        notifyTelegram("❌ Error procesando el archivo de imagen enviado.");
     }
 }
 
-setInterval(checkTelegramUpdates, 6000);
+// LÓGICA DE REGISTRO E INICIO DE SESIÓN DE AFILIADOS
+function handleAffiliateRegister(e) {
+    e.preventDefault();
+    const nameInput = document.getElementById('reg-name');
+    const aliasInput = document.getElementById('reg-alias');
+    const emailInput = document.getElementById('reg-email');
+    const passwordInput = document.getElementById('reg-password');
 
-// LÓGICA MÓDULO DE AFILIADOS
-function checkAffiliateSession() {
-    const activeAlias = sessionStorage.getItem('vylon_affiliate_session');
-    const authSection = document.getElementById('section-auth');
-    const dashSection = document.getElementById('section-dashboard');
+    const name = nameInput.value.trim();
+    const alias = aliasInput.value.trim().toLowerCase().replace(/\s+/g, '');
+    const email = emailInput.value.trim().toLowerCase();
+    const password = passwordInput.value;
 
-    if (!authSection || !dashSection) return;
-
-    if (activeAlias) {
-        const affiliates = getAffiliates();
-        const aff = affiliates.find(a => a.alias === activeAlias || a.code === activeAlias);
-        if (aff) {
-            authSection.classList.add('hidden');
-            dashSection.classList.remove('hidden');
-            renderAffiliateDashboard(aff);
-        } else {
-            sessionStorage.removeItem('vylon_affiliate_session');
-            authSection.classList.remove('hidden');
-            dashSection.classList.add('hidden');
-        }
-    } else {
-        authSection.classList.remove('hidden');
-        dashSection.classList.add('hidden');
-    }
-}
-
-function handleAffiliateRegister(event) {
-    event.preventDefault();
-    const name = document.getElementById('reg-name').value.trim();
-    const alias = document.getElementById('reg-alias').value.trim().toLowerCase().replace(/\s+/g, '');
-    const email = document.getElementById('reg-email').value.trim().toLowerCase();
-    const password = document.getElementById('reg-password').value;
-
-    let affiliates = getAffiliates();
-
-    if (affiliates.some(a => a.alias === alias || a.email === email)) {
-        alert("El alias o el correo ya se encuentran registrados.");
+    if (!name || !alias || !email || !password) {
+        alert("Por favor completa todos los campos.");
         return;
     }
 
-    let code = generateAffiliateCode();
-    while (affiliates.some(a => a.code === code)) {
-        code = generateAffiliateCode();
+    const affiliates = getAffiliates();
+    const exists = affiliates.some(a => a.alias === alias || a.email === email);
+    if (exists) {
+        alert("El alias o correo electrónico ya se encuentra registrado.");
+        return;
     }
 
-    const newAffiliate = { id: Date.now(), name, alias, email, code, password };
+    const newAffiliate = {
+        id: Date.now(),
+        code: generateAffiliateCode(),
+        name: name,
+        alias: alias,
+        email: email,
+        password: password,
+        status: 'activo', // 'activo' o 'bloqueado'
+        createdAt: new Date().toLocaleDateString('es-VE')
+    };
 
     affiliates.push(newAffiliate);
-    localStorage.setItem('vylon_db_affiliates', JSON.stringify(affiliates));
+    saveAffiliates(affiliates);
 
-    sessionStorage.setItem('vylon_affiliate_session', alias);
-    notifyTelegram(`👤 <b>NUEVO AFILIADO REGISTRADO</b>\n\n<b>Nombre:</b> ${name}\n<b>Alias:</b> ${alias}\n<b>Código Único:</b> <code>${code}</code>\n<b>Correo:</b> ${email}`);
-
+    sessionStorage.setItem('vylon_affiliate_user', JSON.stringify(newAffiliate));
+    alert("¡Cuenta de Afiliado creada exitosamente!");
+    
+    notifyTelegram(`👤 <b>NUEVO AFILIADO REGISTRADO</b>\n\nNombre: <b>${name}</b>\nAlias: <code>${alias}</code>\nCorreo: ${email}\nCódigo: <code>${newAffiliate.code}</code>`);
+    
     checkAffiliateSession();
 }
 
-function handleAffiliateLogin(event) {
-    event.preventDefault();
+function handleAffiliateLogin(e) {
+    e.preventDefault();
     const identifier = document.getElementById('login-identifier').value.trim().toLowerCase();
     const password = document.getElementById('login-password').value;
 
     const affiliates = getAffiliates();
-    const aff = affiliates.find(a => (a.alias === identifier || a.email === identifier || (a.code && a.code.toLowerCase() === identifier)) && a.password === password);
+    const user = affiliates.find(a => (a.alias === identifier || a.email === identifier) && a.password === password);
 
-    if (aff) {
-        sessionStorage.setItem('vylon_affiliate_session', aff.alias);
-        checkAffiliateSession();
-    } else {
-        alert("Credenciales incorrectas. Verifique usuario, código o contraseña.");
+    if (!user) {
+        alert("Credenciales incorrectas. Verifica tu alias/correo y contraseña.");
+        return;
     }
-}
 
-function handleAffiliateLogout() {
-    sessionStorage.removeItem('vylon_affiliate_session');
+    if (user.status === 'bloqueado') {
+        alert("Su cuenta se encuentra BLOQUEADA temporalmente. Si requiere hacer una modificación o solicitar desbloqueo, escriba directamente al administrador mediante el botón de soporte.");
+        return;
+    }
+
+    sessionStorage.setItem('vylon_affiliate_user', JSON.stringify(user));
     checkAffiliateSession();
 }
 
-function renderAffiliateDashboard(affiliate) {
-    const affNameDisplay = document.getElementById('affiliate-name-display');
-    const affAliasDisplay = document.getElementById('affiliate-alias-display');
-    if (affNameDisplay) affNameDisplay.innerText = affiliate.name;
-    if (affAliasDisplay) affAliasDisplay.innerText = affiliate.alias;
+function handleAffiliateLogout() {
+    sessionStorage.removeItem('vylon_affiliate_user');
+    checkAffiliateSession();
+}
 
-    if (!affiliate.code) {
-        let affiliates = getAffiliates();
-        affiliate.code = generateAffiliateCode();
-        const index = affiliates.findIndex(a => a.id === affiliate.id);
-        if (index !== -1) {
-            affiliates[index].code = affiliate.code;
-            localStorage.setItem('vylon_db_affiliates', JSON.stringify(affiliates));
+function checkAffiliateSession() {
+    const secAuth = document.getElementById('section-auth');
+    const secDash = document.getElementById('section-dashboard');
+
+    if (!secAuth || !secDash) return;
+
+    const sessionData = sessionStorage.getItem('vylon_affiliate_user');
+    if (sessionData) {
+        const user = JSON.parse(sessionData);
+        // Validar si el usuario sigue existiendo y activo en la DB
+        const affiliates = getAffiliates();
+        const currentInDb = affiliates.find(a => a.id === user.id);
+
+        if (!currentInDb || currentInDb.status === 'bloqueado') {
+            sessionStorage.removeItem('vylon_affiliate_user');
+            alert("Su sesión ha expirado o su cuenta ha sido bloqueada.");
+            secAuth.classList.remove('hidden');
+            secDash.classList.add('hidden');
+            return;
         }
+
+        secAuth.classList.add('hidden');
+        secDash.classList.remove('hidden');
+        renderAffiliateDashboard(currentInDb);
+    } else {
+        secAuth.classList.remove('hidden');
+        secDash.classList.add('hidden');
     }
+}
 
-    const baseUrl = window.location.origin + window.location.pathname.replace('afiliado.html', 'index.html');
-    const refLink = `${baseUrl}?ref=${affiliate.code}`;
-    const refInput = document.getElementById('affiliate-referral-link');
-    if (refInput) refInput.value = refLink;
-
-    const orders = getOrders();
-    const products = getProducts();
+function renderAffiliateDashboard(user) {
     const config = getConfig();
 
-    const affOrders = orders.filter(o => o.affiliateRef === affiliate.code || o.affiliateAlias === affiliate.alias);
+    document.getElementById('affiliate-name-display').innerText = user.name || user.alias;
+    document.getElementById('affiliate-alias-display').innerText = `@${user.alias}`;
 
-    let totalEarnedUSDT = 0;
+    const baseUrl = window.location.origin + window.location.pathname.replace('afiliado.html', 'index.html');
+    const refLink = `${baseUrl}?ref=${user.alias}`;
+    document.getElementById('affiliate-referral-link').value = refLink;
+
+    const orders = getOrders().filter(o => o.refAlias === user.alias || o.refCode === user.code);
+    let totalSalesCount = orders.length;
+    let totalEarningsUSDT = 0;
+
     const tbody = document.getElementById('affiliate-orders-tbody');
     if (tbody) {
         tbody.innerHTML = '';
-        affOrders.forEach(o => {
-            const prod = products.find(p => p.id === o.productId);
-            const commRate = prod ? prod.commissionUSDT : 0;
-            const totalComm = commRate * o.qty;
-            totalEarnedUSDT += totalComm;
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="p-3 font-mono font-bold">${o.id}</td>
-                <td class="p-3 text-gray-400">${o.date}</td>
-                <td class="p-3 font-bold text-white">${o.productName} (x${o.qty})</td>
-                <td class="p-3">$${o.priceUSDT.toFixed(2)}</td>
-                <td class="p-3 font-bold text-emerald-400">+$${totalComm.toFixed(2)} USDT</td>
-            `;
-            tbody.appendChild(tr);
-        });
+        if (orders.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">Aún no tienes ventas referidas registradas.</td></tr>`;
+        } else {
+            orders.forEach(ord => {
+                const comm = ord.commissionUSDT || 0;
+                totalEarningsUSDT += comm;
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-900/50 transition">
+                        <td class="p-3 font-mono text-amber-400">#${ord.id}</td>
+                        <td class="p-3 text-gray-400">${ord.date}</td>
+                        <td class="p-3 font-bold text-white">${ord.productName} (x${ord.qty})</td>
+                        <td class="p-3 text-emerald-400 font-bold">$${ord.totalUSDT.toFixed(2)} USDT</td>
+                        <td class="p-3 text-blue-400 font-bold">$${comm.toFixed(2)} USDT</td>
+                    </tr>
+                `;
+            });
+        }
     }
 
-    const totalEarnedBs = totalEarnedUSDT * config.exchangeRate;
-
-    const statSales = document.getElementById('aff-stat-sales');
-    const statEarnings = document.getElementById('aff-stat-earnings');
-    const statEarningsBs = document.getElementById('aff-stat-earnings-bs');
-
-    if (statSales) statSales.innerText = affOrders.length;
-    if (statEarnings) statEarnings.innerText = `$${totalEarnedUSDT.toFixed(2)} USDT`;
-    if (statEarningsBs) statEarningsBs.innerText = `Bs. ${totalEarnedBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
+    document.getElementById('aff-stat-sales').innerText = totalSalesCount;
+    document.getElementById('aff-stat-earnings').innerText = `$${totalEarningsUSDT.toFixed(2)} USDT`;
+    const earningsBs = totalEarningsUSDT * config.exchangeRate;
+    document.getElementById('aff-stat-earnings-bs').innerText = `Bs. ${earningsBs.toFixed(2)}`;
 }
 
 function copyReferralLink() {
-    const input = document.getElementById('affiliate-referral-link');
-    if (input) {
-        input.select();
-        navigator.clipboard.writeText(input.value);
-        alert("¡Link de referido copiado al portapapeles!");
-    }
+    const linkInput = document.getElementById('affiliate-referral-link');
+    if (!linkInput) return;
+    linkInput.select();
+    navigator.clipboard.writeText(linkInput.value);
+    alert("¡Link de referido copiado al portapapeles!");
 }
 
-// CONTROL DE ACCESO ADMINISTRATIVO
-let logoClickCount = 0;
-let logoClickTimer = null;
+// ENVÍO DE MENSAJES DE SOPORTE DE AFILIADO A ADMINISTRADOR
+function sendAffiliateSupportMessage(e) {
+    e.preventDefault();
+    const sessionData = sessionStorage.getItem('vylon_affiliate_user');
+    if (!sessionData) return;
+    const user = JSON.parse(sessionData);
 
-function handleLogoClick() {
-    logoClickCount++;
-    if (logoClickCount === 1) {
-        logoClickTimer = setTimeout(() => { logoClickCount = 0; }, 2500);
-    }
-    if (logoClickCount >= 5) {
-        clearTimeout(logoClickTimer);
-        logoClickCount = 0;
-        openAdminAuthModal();
-    }
-}
+    const subject = document.getElementById('supp-subject').value.trim();
+    const message = document.getElementById('supp-message').value.trim();
 
-window.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
-        e.preventDefault();
-        openAdminAuthModal();
-    }
-});
-
-function openAdminAuthModal() {
-    const modal = document.getElementById('modal-admin-auth');
-    if (modal) {
-        modal.classList.remove('hidden');
-    } else {
-        const pin = prompt("Ingrese la clave administrativa PIN:");
-        if (pin === ADMIN_PIN) {
-            sessionStorage.setItem('vylon_admin_auth', 'true');
-            window.location.href = 'admin.html';
-        } else if (pin) {
-            alert("PIN incorrecto.");
-        }
-    }
-}
-
-function closeAdminAuthModal() {
-    const modal = document.getElementById('modal-admin-auth');
-    if (modal) modal.classList.add('hidden');
-}
-
-function handleAdminLogin(event) {
-    event.preventDefault();
-    const pinInput = document.getElementById('admin-pin-input');
-    if (!pinInput) return;
-
-    if (pinInput.value === ADMIN_PIN) {
-        sessionStorage.setItem('vylon_admin_auth', 'true');
-        window.location.href = 'admin.html';
-    } else {
-        alert("PIN Administrativo Incorrecto.");
-        pinInput.value = '';
-    }
-}
-
-// TIENDA PÚBLICA Y PROCESO DE COMPRA
-function renderPublicStore() {
-    const grid = document.getElementById('public-grid');
-    if (!grid) return;
-
-    const products = getProducts();
-    const config = getConfig();
-    const query = (document.getElementById('public-search')?.value || '').toLowerCase();
-
-    const sloganEl = document.getElementById('store-slogan');
-    if (sloganEl) sloganEl.innerText = config.slogan;
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const refCode = urlParams.get('ref') || '';
-
-    grid.innerHTML = '';
-
-    const filtered = products.filter(p => p.name.toLowerCase().includes(query) || p.code.includes(query));
-
-    if (filtered.length === 0) {
-        grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500 text-xs">No se encontraron productos en catálogo.</div>`;
+    if (!subject || !message) {
+        alert("Por favor completa el asunto y la descripción de tu solicitud.");
         return;
     }
 
-    filtered.forEach(p => {
-        const priceBs = (p.priceUSDT * config.exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const card = document.createElement('div');
-        card.className = "bg-vylon-cardBg border border-vylon-border rounded-xl p-4 flex flex-col justify-between space-y-3 shadow-lg hover:border-vylon-gold/50 transition";
-        card.innerHTML = `
-            <div>
-                <div class="flex justify-between items-start">
-                    <span class="text-[10px] font-mono text-gray-500">COD: ${p.code}</span>
-                    <span class="text-[10px] px-2 py-0.5 rounded font-bold ${p.stock > 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}">
-                        ${p.stock > 0 ? 'Stock: ' + p.stock : 'Agotado'}
-                    </span>
-                </div>
-                <h4 class="text-sm font-bold text-white mt-2 leading-snug">${p.name}</h4>
-            </div>
-            <div>
-                <div class="text-lg font-black text-vylon-gold">${p.priceUSDT.toFixed(2)} USDT</div>
-                <div class="text-xs text-gray-400">Bs. ${priceBs}</div>
-                <button onclick="openBuyModal(${p.id}, '${refCode}')" ${p.stock <= 0 ? 'disabled' : ''} class="w-full mt-3 bg-vylon-gold hover:bg-vylon-goldHover disabled:bg-gray-800 disabled:text-gray-600 text-black font-bold py-2 rounded-lg text-xs transition">
-                    ${p.stock > 0 ? 'Comprar Ahora' : 'Sin Existencias'}
-                </button>
-            </div>
-        `;
-        grid.appendChild(card);
-    });
+    const tgMessage = `📩 <b>SOLICITUD DE CAMBIO DE DATOS / SOPORTE</b>\n\n<b>Afiliado:</b> ${user.name} (@${user.alias})\n<b>Correo Actual:</b> ${user.email}\n<b>ID Afiliado:</b> ${user.id}\n\n📌 <b>Asunto:</b> ${subject}\n📝 <b>Mensaje:</b> ${message}`;
+
+    notifyTelegram(tgMessage);
+    alert("¡Tu solicitud ha sido enviada con éxito al administrador!");
+
+    document.getElementById('supp-subject').value = '';
+    document.getElementById('supp-message').value = '';
 }
 
-function openBuyModal(productId, refCode) {
-    const products = getProducts();
-    const config = getConfig();
-    const prod = products.find(p => p.id === productId);
-    if (!prod) return;
-
-    document.getElementById('buy-product-id').value = prod.id;
-    document.getElementById('buy-affiliate-alias').value = refCode;
-    document.getElementById('buy-client-qty').value = 1;
-
-    document.getElementById('pm-info-bank').innerText = config.pmBank;
-    document.getElementById('pm-info-phone').innerText = config.pmPhone;
-    document.getElementById('pm-info-ci').innerText = config.pmCi;
-
-    const detailsDiv = document.getElementById('buy-product-details');
-    detailsDiv.innerHTML = `
-        <div class="font-bold text-white">${prod.name}</div>
-        <div class="text-gray-400">Precio Unitario: <span class="text-vylon-gold font-bold">$${prod.priceUSDT.toFixed(2)} USDT</span></div>
-    `;
-
-    calculateOrderTotal();
-    document.getElementById('modal-buy').classList.remove('hidden');
-}
-
-function closeBuyModal() {
-    document.getElementById('modal-buy').classList.add('hidden');
-}
-
-function calculateOrderTotal() {
-    const productId = parseInt(document.getElementById('buy-product-id').value);
-    const qty = parseInt(document.getElementById('buy-client-qty').value) || 1;
-    const products = getProducts();
-    const config = getConfig();
-
-    const prod = products.find(p => p.id === productId);
-    if (!prod) return;
-
-    const totalUSDT = prod.priceUSDT * qty;
-    const totalBs = totalUSDT * config.exchangeRate;
-
-    document.getElementById('buy-total-calculated').innerText = `$${totalUSDT.toFixed(2)} USDT (Bs. ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })})`;
-}
-
-function submitCustomerOrder(event) {
-    event.preventDefault();
-    const productId = parseInt(document.getElementById('buy-product-id').value);
-    const refCode = document.getElementById('buy-affiliate-alias').value;
-    const clientName = document.getElementById('buy-client-name').value.trim();
-    const clientEmail = document.getElementById('buy-client-email').value.trim();
-    const qty = parseInt(document.getElementById('buy-client-qty').value);
-
-    let products = getProducts();
-    let orders = getOrders();
-    const config = getConfig();
-
-    const prodIndex = products.findIndex(p => p.id === productId);
-    if (prodIndex === -1) return;
-
-    const prod = products[prodIndex];
-    if (prod.stock < qty) {
-        alert("La cantidad requerida supera el inventario disponible.");
-        return;
-    }
-
-    // Descontar inventario
-    products[prodIndex].stock -= qty;
-    products[prodIndex].sales = (products[prodIndex].sales || 0) + qty;
-    localStorage.setItem('vylon_db_products', JSON.stringify(products));
-
-    const totalUSDT = prod.priceUSDT * qty;
-    const totalBs = totalUSDT * config.exchangeRate;
-    const orderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
-
-    const newOrder = {
-        id: orderId,
-        date: new Date().toLocaleDateString('es-VE') + ' ' + new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
-        productId: prod.id,
-        productName: prod.name,
-        qty: qty,
-        priceUSDT: prod.priceUSDT,
-        totalUSDT: totalUSDT,
-        clientName: clientName,
-        clientEmail: clientEmail,
-        affiliateRef: refCode
-    };
-
-    orders.unshift(newOrder);
-    localStorage.setItem('vylon_db_orders', JSON.stringify(orders));
-
-    notifyTelegram(`🛒 <b>NUEVO PEDIDO REGISTRADO (${orderId})</b>\n\n<b>Cliente:</b> ${clientName}\n<b>Producto:</b> ${prod.name} (x${qty})\n<b>Total:</b> $${totalUSDT.toFixed(2)} USDT / Bs. ${totalBs.toFixed(2)}\n<b>Referido:</b> ${refCode || 'Directo'}`);
-
-    alert(`¡Pedido ${orderId} registrado exitosamente! Serás redirigido para coordinar el pago.`);
-    closeBuyModal();
-    renderPublicStore();
-
-    // Redirigir a WhatsApp
-    const msg = `Hola Vylon, acabo de hacer un pedido de ${qty}x ${prod.name} por un total de $${totalUSDT.toFixed(2)} USDT (Bs. ${totalBs.toFixed(2)}). Mi nombre es ${clientName}. ID de Orden: ${orderId}`;
-    window.open(`https://wa.me/584129830982?text=${encodeURIComponent(msg)}`, '_blank');
-}
-
-// RENDERING DE PANEL DE ADMINISTRACIÓN (admin.html)
-function switchAdminTab(tabName) {
-    const tabs = ['inventory', 'orders', 'affiliates', 'config'];
-    tabs.forEach(t => {
-        const sec = document.getElementById(`admin-sec-${t}`);
-        const btn = document.getElementById(`tab-btn-${t}`);
-        if (sec) sec.classList.add('hidden');
-        if (btn) {
-            btn.classList.remove('text-amber-400', 'border-b-2', 'border-amber-400');
-            btn.classList.add('text-gray-400');
-        }
-    });
-
-    const targetSec = document.getElementById(`admin-sec-${tabName}`);
-    const targetBtn = document.getElementById(`tab-btn-${tabName}`);
-    if (targetSec) targetSec.classList.remove('hidden');
-    if (targetBtn) {
-        targetBtn.classList.add('text-amber-400', 'border-b-2', 'border-amber-400');
-        targetBtn.classList.remove('text-gray-400');
-    }
-}
-
+// LÓGICA DEL PANEL ADMINISTRATIVO
 function renderAdminDashboard() {
     const products = getProducts();
     const orders = getOrders();
     const affiliates = getAffiliates();
     const config = getConfig();
 
-    let totalSalesCount = orders.length;
-    let totalUSDT = orders.reduce((acc, o) => acc + (o.totalUSDT || 0), 0);
-    let totalBs = totalUSDT * config.exchangeRate;
+    // Métricas generales
+    const totalSales = orders.length;
+    let totalUSDT = 0;
+    orders.forEach(o => { totalUSDT += (o.totalUSDT || 0); });
+    const totalBs = totalUSDT * config.exchangeRate;
+    const activeAffiliatesCount = affiliates.filter(a => a.status !== 'bloqueado').length;
 
-    const statSales = document.getElementById('stat-total-sales');
-    const statUSDT = document.getElementById('stat-total-usdt');
-    const statBs = document.getElementById('stat-total-bs');
-    const statAff = document.getElementById('stat-total-affiliates');
+    if (document.getElementById('stat-total-sales')) document.getElementById('stat-total-sales').innerText = totalSales;
+    if (document.getElementById('stat-total-usdt')) document.getElementById('stat-total-usdt').innerText = `$${totalUSDT.toFixed(2)}`;
+    if (document.getElementById('stat-total-bs')) document.getElementById('stat-total-bs').innerText = `Bs. ${totalBs.toFixed(2)}`;
+    if (document.getElementById('stat-total-affiliates')) document.getElementById('stat-total-affiliates').innerText = activeAffiliatesCount;
 
-    if (statSales) statSales.innerText = totalSalesCount;
-    if (statUSDT) statUSDT.innerText = `$${totalUSDT.toFixed(2)}`;
-    if (statBs) statBs.innerText = `Bs. ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`;
-    if (statAff) statAff.innerText = affiliates.length;
+    renderAdminInventory(products);
+    renderAdminOrders(orders);
+    renderAdminAffiliates(affiliates, orders);
+    loadConfigForm(config);
+}
 
-    // 2. Tabla Inventario
-    const invTbody = document.getElementById('admin-inventory-tbody');
-    if (invTbody) {
-        invTbody.innerHTML = '';
-        products.forEach(p => {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-900/50 transition";
-            tr.innerHTML = `
-                <td class="p-3 font-mono text-gray-400">${p.code}</td>
+// Render Inventario Admin
+function renderAdminInventory(products) {
+    const tbody = document.getElementById('admin-inventory-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (products.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-500">No hay productos cargados en inventario.</td></tr>`;
+        return;
+    }
+
+    products.forEach(p => {
+        tbody.innerHTML += `
+            <tr class="hover:bg-slate-900/50 transition">
+                <td class="p-3 font-mono text-xs text-gray-400">${p.code || 'S/C'}</td>
                 <td class="p-3 font-bold text-white">${p.name}</td>
-                <td class="p-3 font-bold text-emerald-400">$${p.priceUSDT.toFixed(2)}</td>
-                <td class="p-3"><span class="px-2 py-1 bg-slate-800 rounded font-bold text-white">${p.stock}</span></td>
-                <td class="p-3 text-red-400 font-bold">${p.damaged || 0}</td>
-                <td class="p-3 text-amber-400 font-bold">$${p.commissionUSDT.toFixed(2)}</td>
-                <td class="p-3 text-right space-x-2">
-                    <button onclick="editProductModal(${p.id})" class="bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white px-2.5 py-1 rounded transition text-xs font-bold">
-                        <i class="fa-solid fa-pen-to-square"></i>
+                <td class="p-3 text-emerald-400 font-bold">$${parseFloat(p.priceUSDT).toFixed(2)} USDT</td>
+                <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${p.stock < 10 ? 'bg-red-900/50 text-red-300' : 'bg-emerald-900/50 text-emerald-300'}">${p.stock} unids</span></td>
+                <td class="p-3 text-blue-400 font-bold">$${parseFloat(p.commissionUSDT || 0).toFixed(2)} USDT</td>
+                <td class="p-3 text-gray-300">${p.sales || 0}</td>
+                <td class="p-3 flex gap-2">
+                    <button onclick="openEditProductModal(${p.id})" class="bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white p-2 rounded-lg text-xs transition">
+                        <i class="fa-solid fa-pen"></i>
                     </button>
-                    <button onclick="deleteProduct(${p.id})" class="bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white px-2.5 py-1 rounded transition text-xs font-bold">
+                    <button onclick="deleteProduct(${p.id})" class="bg-red-600/30 hover:bg-red-600 text-red-300 hover:text-white p-2 rounded-lg text-xs transition">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </td>
-            `;
-            invTbody.appendChild(tr);
-        });
+            </tr>
+        `;
+    });
+}
+
+// Render Pedidos Admin
+function renderAdminOrders(orders) {
+    const tbody = document.getElementById('admin-orders-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (orders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-500">No hay pedidos registrados en el sistema.</td></tr>`;
+        return;
     }
 
-    // 3. Tabla Órdenes
-    const ordersTbody = document.getElementById('admin-orders-tbody');
-    if (ordersTbody) {
-        ordersTbody.innerHTML = '';
-        orders.forEach(o => {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-900/50 transition";
-            tr.innerHTML = `
-                <td class="p-3 font-mono font-bold text-amber-400">${o.id}</td>
-                <td class="p-3 text-gray-400">${o.date || '-'}</td>
-                <td class="p-3 font-bold text-white">${o.clientName || 'Cliente'}</td>
-                <td class="p-3 text-gray-300">${o.productName} (x${o.qty})</td>
-                <td class="p-3 font-bold text-emerald-400">$${(o.totalUSDT || 0).toFixed(2)}</td>
-                <td class="p-3 font-mono text-blue-400">${o.affiliateRef || '-'}</td>
-                <td class="p-3"><span class="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-[10px] font-bold">Completado</span></td>
-                <td class="p-3 text-right">
-                    <button onclick="deleteOrder('${o.id}')" class="text-gray-500 hover:text-red-400 p-1"><i class="fa-solid fa-trash"></i></button>
+    orders.forEach(o => {
+        tbody.innerHTML += `
+            <tr class="hover:bg-slate-900/50 transition">
+                <td class="p-3 font-mono text-amber-400 font-bold">#${o.id}</td>
+                <td class="p-3 text-gray-400">${o.date}</td>
+                <td class="p-3">
+                    <p class="font-bold text-white">${o.clientName || 'Cliente'}</p>
+                    <p class="text-[10px] text-gray-400">${o.clientPhone || ''}</p>
                 </td>
-            `;
-            ordersTbody.appendChild(tr);
-        });
+                <td class="p-3 text-white font-bold">${o.productName} (x${o.qty})</td>
+                <td class="p-3 font-bold text-emerald-400">$${o.totalUSDT.toFixed(2)} / Bs. ${(o.totalBs || 0).toFixed(2)}</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${o.refAlias ? 'bg-purple-900/50 text-purple-300' : 'bg-gray-800 text-gray-400'}">${o.refAlias ? '@' + o.refAlias : 'Directo'}</span></td>
+                <td class="p-3">
+                    <span class="px-2 py-1 rounded text-xs font-bold ${o.status === 'Completado' ? 'bg-emerald-900/50 text-emerald-300' : 'bg-amber-900/50 text-amber-300'}">${o.status || 'Pendiente'}</span>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// Render Afiliados Admin (Inclusión de Nombre, Correo, Botones Editar, Bloquear/Desbloquear, Eliminar)
+function renderAdminAffiliates(affiliates, orders) {
+    const tbody = document.getElementById('admin-affiliates-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (affiliates.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-500">No hay afiliados registrados.</td></tr>`;
+        return;
     }
 
-    // 4. Tabla Afiliados
-    const affTbody = document.getElementById('admin-affiliates-tbody');
-    if (affTbody) {
-        affTbody.innerHTML = '';
-        affiliates.forEach(a => {
-            const affOrders = orders.filter(o => o.affiliateRef === a.code || o.affiliateAlias === a.alias);
-            let commSum = 0;
-            affOrders.forEach(o => {
-                const prod = products.find(p => p.id === o.productId);
-                if (prod) commSum += prod.commissionUSDT * o.qty;
-            });
+    affiliates.forEach(a => {
+        const affOrders = orders.filter(o => o.refAlias === a.alias || o.refCode === a.code);
+        let totalCommissions = 0;
+        affOrders.forEach(o => { totalCommissions += (o.commissionUSDT || 0); });
 
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-900/50 transition";
-            tr.innerHTML = `
-                <td class="p-3 font-bold text-white">${a.name}</td>
-                <td class="p-3 text-gray-400">@${a.alias}</td>
-                <td class="p-3 font-mono font-bold text-amber-400">${a.code || '-'}</td>
-                <td class="p-3 text-gray-400">${a.email}</td>
-                <td class="p-3 font-bold text-white">${affOrders.length}</td>
-                <td class="p-3 font-bold text-emerald-400">$${commSum.toFixed(2)} USDT</td>
-            `;
-            affTbody.appendChild(tr);
-        });
+        const isBlocked = a.status === 'bloqueado';
+
+        tbody.innerHTML += `
+            <tr class="hover:bg-slate-900/50 transition ${isBlocked ? 'opacity-60 bg-red-950/20' : ''}">
+                <td class="p-3 font-mono text-xs text-amber-400 font-bold">${a.code || 'VYL-000'}</td>
+                <td class="p-3">
+                    <p class="font-bold text-white text-xs">${a.name || 'Sin Nombre'}</p>
+                    <p class="text-[11px] font-mono text-blue-400">@${a.alias}</p>
+                </td>
+                <td class="p-3 text-xs text-gray-300">${a.email || 'Sin correo'}</td>
+                <td class="p-3">
+                    <span class="px-2 py-1 rounded-full text-[10px] font-bold ${isBlocked ? 'bg-red-900/60 text-red-300 border border-red-700' : 'bg-emerald-900/60 text-emerald-300 border border-emerald-700'}">
+                        ${isBlocked ? 'Bloqueado' : 'Activo'}
+                    </span>
+                </td>
+                <td class="p-3 font-bold text-gray-200">${affOrders.length} ventas</td>
+                <td class="p-3 font-bold text-emerald-400">$${totalCommissions.toFixed(2)} USDT</td>
+                <td class="p-3 flex items-center gap-1.5">
+                    <button onclick="openEditAffiliateModal(${a.id})" title="Ver / Editar Información" class="bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1">
+                        <i class="fa-solid fa-user-pen"></i> Editar
+                    </button>
+                    <button onclick="toggleBlockAffiliate(${a.id})" title="${isBlocked ? 'Desbloquear Afiliado' : 'Bloquear Afiliado'}" class="${isBlocked ? 'bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300' : 'bg-amber-600/30 hover:bg-amber-600 text-amber-300'} hover:text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1">
+                        <i class="fa-solid ${isBlocked ? 'fa-lock-open' : 'fa-lock'}"></i> ${isBlocked ? 'Desbloquear' : 'Bloquear'}
+                    </button>
+                    <button onclick="deleteAffiliate(${a.id})" title="Eliminar Afiliado" class="bg-red-600/30 hover:bg-red-600 text-red-300 hover:text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// MODAL Y ACCIONES DE ADMINISTRACIÓN DE AFILIADOS
+function openEditAffiliateModal(affiliateId) {
+    const affiliates = getAffiliates();
+    const aff = affiliates.find(a => a.id === affiliateId);
+    if (!aff) return;
+
+    document.getElementById('edit-aff-id').value = aff.id;
+    document.getElementById('edit-aff-code').value = aff.code || '';
+    document.getElementById('edit-aff-name').value = aff.name || '';
+    document.getElementById('edit-aff-alias').value = aff.alias || '';
+    document.getElementById('edit-aff-email').value = aff.email || '';
+    document.getElementById('edit-aff-status').value = aff.status || 'activo';
+
+    const modal = document.getElementById('modal-edit-affiliate');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeEditAffiliateModal() {
+    const modal = document.getElementById('modal-edit-affiliate');
+    if (modal) modal.classList.add('hidden');
+}
+
+function saveAffiliateChanges(e) {
+    e.preventDefault();
+    const id = parseInt(document.getElementById('edit-aff-id').value);
+    const name = document.getElementById('edit-aff-name').value.trim();
+    const alias = document.getElementById('edit-aff-alias').value.trim().toLowerCase().replace(/\s+/g, '');
+    const email = document.getElementById('edit-aff-email').value.trim().toLowerCase();
+    const status = document.getElementById('edit-aff-status').value;
+
+    let affiliates = getAffiliates();
+    const index = affiliates.findIndex(a => a.id === id);
+
+    if (index !== -1) {
+        affiliates[index].name = name;
+        affiliates[index].alias = alias;
+        affiliates[index].email = email;
+        affiliates[index].status = status;
+
+        saveAffiliates(affiliates);
+        closeEditAffiliateModal();
+        renderAdminDashboard();
+        alert("¡Información de afiliado actualizada con éxito!");
+        
+        notifyTelegram(`📝 <b>INFORMACIÓN DE AFILIADO ACTUALIZADA POR ADMIN</b>\n\nNombre: <b>${name}</b>\nAlias: <code>${alias}</code>\nCorreo: ${email}\nEstado: <b>${status.toUpperCase()}</b>`);
     }
-
-    // 5. Cargar Configuración
-    const sloganInput = document.getElementById('cfg-slogan');
-    const rateInput = document.getElementById('cfg-exchange-rate');
-    const ciInput = document.getElementById('cfg-pm-ci');
-    const phoneInput = document.getElementById('cfg-pm-phone');
-    const bankInput = document.getElementById('cfg-pm-bank');
-    const tokenInput = document.getElementById('cfg-telegram-token');
-    const chatInput = document.getElementById('cfg-telegram-chatid');
-
-    if (sloganInput) sloganInput.value = config.slogan || '';
-    if (rateInput) rateInput.value = config.exchangeRate || DEFAULT_EXCHANGE_RATE;
-    if (ciInput) ciInput.value = config.pmCi || '';
-    if (phoneInput) phoneInput.value = config.pmPhone || '';
-    if (bankInput) bankInput.value = config.pmBank || '';
-    if (tokenInput) tokenInput.value = config.telegramToken || '';
-    if (chatInput) chatInput.value = config.telegramChatId || '';
 }
 
-// Modales Inventario Admin
-function openAddProductModal() {
-    document.getElementById('edit-prod-id').value = '';
-    document.getElementById('edit-prod-name').value = '';
-    document.getElementById('edit-prod-code').value = '';
-    document.getElementById('edit-prod-price').value = '';
-    document.getElementById('edit-prod-stock').value = '';
-    document.getElementById('edit-prod-comm').value = '';
-    document.getElementById('modal-prod-title').innerText = 'Nuevo Producto';
-    document.getElementById('modal-edit-prod').classList.remove('hidden');
-}
+function toggleBlockAffiliate(affiliateId) {
+    let affiliates = getAffiliates();
+    const index = affiliates.findIndex(a => a.id === affiliateId);
+    if (index !== -1) {
+        const currentStatus = affiliates[index].status || 'activo';
+        const newStatus = currentStatus === 'bloqueado' ? 'activo' : 'bloqueado';
+        affiliates[index].status = newStatus;
 
-function editProductModal(id) {
-    const products = getProducts();
-    const prod = products.find(p => p.id === id);
-    if (!prod) return;
+        saveAffiliates(affiliates);
+        renderAdminDashboard();
 
-    document.getElementById('edit-prod-id').value = prod.id;
-    document.getElementById('edit-prod-name').value = prod.name;
-    document.getElementById('edit-prod-code').value = prod.code;
-    document.getElementById('edit-prod-price').value = prod.priceUSDT;
-    document.getElementById('edit-prod-stock').value = prod.stock;
-    document.getElementById('edit-prod-comm').value = prod.commissionUSDT;
-    document.getElementById('modal-prod-title').innerText = 'Editar Producto';
-    document.getElementById('modal-edit-prod').classList.remove('hidden');
-}
+        const actionText = newStatus === 'bloqueado' ? 'BLOQUEADO' : 'DESBLOQUEADO';
+        alert(`El afiliado @${affiliates[index].alias} ha sido ${actionText}.`);
 
-function closeEditProdModal() {
-    document.getElementById('modal-edit-prod').classList.add('hidden');
-}
-
-function saveProductModal(event) {
-    event.preventDefault();
-    const id = document.getElementById('edit-prod-id').value;
-    const name = document.getElementById('edit-prod-name').value.trim();
-    const code = document.getElementById('edit-prod-code').value.trim();
-    const priceUSDT = parseFloat(document.getElementById('edit-prod-price').value);
-    const stock = parseInt(document.getElementById('edit-prod-stock').value);
-    const commissionUSDT = parseFloat(document.getElementById('edit-prod-comm').value);
-
-    let products = getProducts();
-
-    if (id) {
-        const index = products.findIndex(p => p.id == id);
-        if (index !== -1) {
-            products[index] = { ...products[index], name, code, priceUSDT, stock, commissionUSDT };
-        }
-    } else {
-        const newProd = {
-            id: Date.now(),
-            name,
-            code,
-            priceUSDT,
-            stock,
-            damaged: 0,
-            sales: 0,
-            commissionUSDT
-        };
-        products.push(newProd);
+        notifyTelegram(`🔒 <b>AFILIADO ${actionText}</b>\n\nAfiliado: <b>${affiliates[index].name}</b> (@${affiliates[index].alias})\nNuevo Estado: <b>${newStatus.toUpperCase()}</b>`);
     }
-
-    localStorage.setItem('vylon_db_products', JSON.stringify(products));
-    closeEditProdModal();
-    renderAdminDashboard();
 }
 
-function deleteProduct(id) {
-    if (!confirm("¿Está seguro de eliminar este producto del inventario?")) return;
-    let products = getProducts().filter(p => p.id !== id);
-    localStorage.setItem('vylon_db_products', JSON.stringify(products));
-    renderAdminDashboard();
+function deleteAffiliate(affiliateId) {
+    let affiliates = getAffiliates();
+    const aff = affiliates.find(a => a.id === affiliateId);
+    if (!aff) return;
+
+    if (confirm(`¿Estás seguro de que deseas eliminar permanentemente al afiliado @${aff.alias}? Esta acción no se puede deshacer.`)) {
+        affiliates = affiliates.filter(a => a.id !== affiliateId);
+        saveAffiliates(affiliates);
+        renderAdminDashboard();
+        alert("Afiliado eliminado correctamente.");
+
+        notifyTelegram(`🗑️ <b>AFILIADO ELIMINADO</b>\n\nEl usuario @${aff.alias} (${aff.name}) ha sido eliminado del sistema.`);
+    }
 }
 
-function deleteOrder(id) {
-    if (!confirm("¿Desea eliminar este registro de orden?")) return;
-    let orders = getOrders().filter(o => o.id !== id);
-    localStorage.setItem('vylon_db_orders', JSON.stringify(orders));
-    renderAdminDashboard();
+// Configuración Global Admin
+function loadConfigForm(config) {
+    if (document.getElementById('cfg-slogan')) document.getElementById('cfg-slogan').value = config.slogan || '';
+    if (document.getElementById('cfg-exchange-rate')) document.getElementById('cfg-exchange-rate').value = config.exchangeRate || DEFAULT_EXCHANGE_RATE;
+    if (document.getElementById('cfg-pm-phone')) document.getElementById('cfg-pm-phone').value = config.pmPhone || '';
+    if (document.getElementById('cfg-pm-bank')) document.getElementById('cfg-pm-bank').value = config.pmBank || '';
+    if (document.getElementById('cfg-pm-ci')) document.getElementById('cfg-pm-ci').value = config.pmCi || '';
+    if (document.getElementById('cfg-telegram-token')) document.getElementById('cfg-telegram-token').value = config.telegramToken || '';
+    if (document.getElementById('cfg-telegram-chatid')) document.getElementById('cfg-telegram-chatid').value = config.telegramChatId || '';
 }
 
-function saveSystemConfig(event) {
-    event.preventDefault();
+function saveSystemConfig(e) {
+    e.preventDefault();
     const config = getConfig();
 
     config.slogan = document.getElementById('cfg-slogan').value.trim();
@@ -794,7 +609,7 @@ function saveSystemConfig(event) {
     config.telegramChatId = document.getElementById('cfg-telegram-chatid').value.trim();
 
     localStorage.setItem('vylon_db_config', JSON.stringify(config));
-    alert("¡Configuración guardada exitosamente!");
+    alert("¡Configuración del sistema guardada exitosamente!");
     renderAdminDashboard();
 }
 
@@ -813,10 +628,99 @@ function exportStockJSON() {
     a.click();
 }
 
-// Carga Inicial General
+function openAddProductModal() {
+    const modal = document.getElementById('modal-add-product');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeAddProductModal() {
+    const modal = document.getElementById('modal-add-product');
+    if (modal) modal.classList.add('hidden');
+}
+
+function handleAddProduct(e) {
+    e.preventDefault();
+    const name = document.getElementById('add-prod-name').value.trim();
+    const code = document.getElementById('add-prod-code').value.trim();
+    const priceUSDT = parseFloat(document.getElementById('add-prod-price').value);
+    const stock = parseInt(document.getElementById('add-prod-stock').value);
+    const commUSDT = parseFloat(document.getElementById('add-prod-comm').value);
+
+    let products = getProducts();
+    const newProd = {
+        id: Date.now(),
+        name,
+        code,
+        priceUSDT,
+        stock,
+        damaged: 0,
+        sales: 0,
+        commissionUSDT: commUSDT
+    };
+
+    products.push(newProd);
+    saveProducts(products);
+    closeAddProductModal();
+    renderAdminDashboard();
+    alert("Producto agregado correctamente.");
+}
+
+function openEditProductModal(id) {
+    const products = getProducts();
+    const p = products.find(prod => prod.id === id);
+    if (!p) return;
+
+    document.getElementById('edit-prod-id').value = p.id;
+    document.getElementById('edit-prod-name').value = p.name;
+    document.getElementById('edit-prod-code').value = p.code;
+    document.getElementById('edit-prod-price').value = p.priceUSDT;
+    document.getElementById('edit-prod-stock').value = p.stock;
+    document.getElementById('edit-prod-comm').value = p.commissionUSDT;
+
+    const modal = document.getElementById('modal-edit-product');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeEditProductModal() {
+    const modal = document.getElementById('modal-edit-product');
+    if (modal) modal.classList.add('hidden');
+}
+
+function handleEditProduct(e) {
+    e.preventDefault();
+    const id = parseInt(document.getElementById('edit-prod-id').value);
+    let products = getProducts();
+    const index = products.findIndex(p => p.id === id);
+
+    if (index !== -1) {
+        products[index].name = document.getElementById('edit-prod-name').value.trim();
+        products[index].code = document.getElementById('edit-prod-code').value.trim();
+        products[index].priceUSDT = parseFloat(document.getElementById('edit-prod-price').value);
+        products[index].stock = parseInt(document.getElementById('edit-prod-stock').value);
+        products[index].commissionUSDT = parseFloat(document.getElementById('edit-prod-comm').value);
+
+        saveProducts(products);
+        closeEditProductModal();
+        renderAdminDashboard();
+        alert("Producto modificado exitosamente.");
+    }
+}
+
+function deleteProduct(id) {
+    if (confirm("¿Seguro que deseas eliminar este producto?")) {
+        let products = getProducts();
+        products = products.filter(p => p.id !== id);
+        saveProducts(products);
+        renderAdminDashboard();
+    }
+}
+
+// Bucle Continuo Telegram Polling
+setInterval(() => {
+    checkTelegramUpdates();
+}, 6000);
+
+// Carga Inicial del Logo
 document.addEventListener('DOMContentLoaded', () => {
     loadSavedLogo();
-    if (document.getElementById('public-grid')) {
-        renderPublicStore();
-    }
 });
